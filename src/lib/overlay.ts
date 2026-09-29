@@ -105,3 +105,30 @@ export function sharedWith(slots: Slot[], me: number, people: number[]): SharedC
     (a, b) => a.meetings[0].day - b.meetings[0].day || a.meetings[0].start - b.meetings[0].start,
   );
 }
+
+export type Gap = { day: number; start: number; end: number };
+
+// The working day free time is looked for in, and the shortest gap worth
+// suggesting: half an hour is the least you can do anything together in.
+export const FREE_WINDOW = { start: 9 * HOUR, end: 17 * HOUR };
+const SHORTEST_GAP = 30;
+
+// Time in the working day when nobody shown has a class: merge everyone's
+// busy intervals per day, then take what's left between them.
+export function freeTogether(slots: Slot[], people: number[]): Gap[] {
+  const gaps: Gap[] = [];
+  for (let day = 1; day <= 5; day++) {
+    const busy = slots
+      .filter((s) => s.day === day && people.includes(s.personId))
+      .map((s) => [s.start, s.end] as const)
+      .sort((a, b) => a[0] - b[0]);
+    let cursor = FREE_WINDOW.start;
+    for (const [start, end] of [...busy, [FREE_WINDOW.end, FREE_WINDOW.end] as const]) {
+      const gapEnd = Math.min(start, FREE_WINDOW.end);
+      if (gapEnd - cursor >= SHORTEST_GAP) gaps.push({ day, start: cursor, end: gapEnd });
+      cursor = Math.max(cursor, end);
+      if (cursor >= FREE_WINDOW.end) break;
+    }
+  }
+  return gaps;
+}

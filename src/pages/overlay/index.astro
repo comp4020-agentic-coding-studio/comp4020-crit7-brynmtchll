@@ -1,7 +1,7 @@
 ---
 import Base from "../../layouts/Base.astro";
 import { friendsOf } from "../../lib/friends";
-import { COLOURS, placeOnGrid, sharedWith } from "../../lib/overlay";
+import { COLOURS, FREE_WINDOW, freeTogether, placeOnGrid, sharedWith } from "../../lib/overlay";
 import { currentPerson } from "../../lib/people";
 import { DAYS, activityLabel, clock, slotsFor } from "../../lib/timetable";
 
@@ -26,9 +26,13 @@ const grid = placeOnGrid(
   shownIds,
 );
 const shared = me ? sharedWith(slots, me.id, shownIds) : [];
+const free = shownIds.length >= 2 ? freeTogether(slots, shownIds) : [];
+const freeByDay = DAYS.map((_, i) => free.filter((g) => g.day === i + 1));
+const pct = (minutes: number): number => ((minutes - grid.from) / (grid.to - grid.from)) * 100;
 const sharedIds = new Set(shared.map((c) => c.classId));
 const list = (ids: number[]): string => {
-  const names = ids.map((id) => nameOf.get(id) ?? "");
+  // mid-sentence, so "you" rather than the legend's "You"
+  const names = ids.map((id) => (id === me?.id ? "you" : (nameOf.get(id) ?? "")));
   return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 };
 const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => grid.from + i * 60);
@@ -82,7 +86,15 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
             {grid.days.map((blocks, i) => (
               <section class="day" aria-labelledby={`day-${i}`}>
                 <h3 id={`day-${i}`}>{DAYS[i]}</h3>
-                <ol class="day-body">
+                <div class="day-body">
+                  {freeByDay[i].map((g) => (
+                    <div
+                      class="free"
+                      aria-hidden="true"
+                      style={`top: ${pct(g.start)}%; height: ${pct(g.end) - pct(g.start)}%`}
+                    />
+                  ))}
+                  <ol class="blocks">
                   {blocks.map((b) => (
                     <li
                       class:list={["block", { shared: sharedIds.has(b.classId) }]}
@@ -105,10 +117,35 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
                       {sharedIds.has(b.classId) && <span class="visually-hidden">(shared)</span>}
                     </li>
                   ))}
-                </ol>
+                  </ol>
+                </div>
               </section>
             ))}
           </div>
+        </section>
+
+        <section aria-labelledby="free-heading">
+          <h2 id="free-heading">Free together</h2>
+          {shownIds.length < 2 ? (
+            <p>Show a friend above to find time you're all free.</p>
+          ) : (
+            <>
+              <p>
+                When {list(shownIds)} are all out of class between {clock(FREE_WINDOW.start)} and{" "}
+                {clock(FREE_WINDOW.end)}. It's shaded green on the grid.
+              </p>
+              <ul class="free-list">
+                {DAYS.map((day, i) => (
+                  <li>
+                    <strong>{day}</strong>:{" "}
+                    {freeByDay[i].length === 0
+                      ? "no time you're all free"
+                      : freeByDay[i].map((g) => `${clock(g.start)}–${clock(g.end)}`).join(", ")}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </section>
 
         <section aria-labelledby="shared-heading">

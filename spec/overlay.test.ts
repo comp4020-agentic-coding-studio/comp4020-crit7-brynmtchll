@@ -68,3 +68,27 @@ describe("the overlay", () => {
     expect(shared.some((line) => line.includes("Tutorial 04"))).toBe(false);
   });
 });
+
+describe("free together", () => {
+  // the "Free together" list, one line per weekday
+  async function freeTimes(): Promise<Record<string, string>> {
+    const html = await page("/overlay/", me.cookie);
+    const section = html.split('id="free-heading"')[1]?.split("</section>")[0] ?? "";
+    return Object.fromEntries(
+      [...section.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) => {
+        const text = m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+        const [day, times] = text.split(": ");
+        return [day, times];
+      }),
+    );
+  }
+
+  it("finds the gaps when nobody shown has class", async () => {
+    const free = await freeTimes();
+    // Wed: our tute 10:30–12:00, Alex's tute 13:00–14:30
+    expect(free.Wed).toBe("09:00–10:30, 12:00–13:00, 14:30–17:00");
+    // Mon: only Sam's lecture 14:00–16:00
+    expect(free.Mon).toBe("09:00–14:00, 16:00–17:00");
+    expect(free.Tue).toBe("09:00–17:00");
+  });
+});
