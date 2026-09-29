@@ -185,28 +185,62 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
                     />
                   ))}
                   <ol class="blocks">
-                  {blocks.map((b) => (
-                    <li
-                      class:list={["block", { shared: sharedIds.has(b.classId) }]}
-                      style={[
-                        `top: ${b.top}%`,
-                        `height: ${b.height}%`,
-                        `left: ${b.left}%`,
-                        `width: ${b.width}%`,
-                        `--fill: ${colour.get(b.personId)?.fill}`,
-                        `--edge: ${colour.get(b.personId)?.edge}`,
-                      ].join("; ")}
-                      title={`${nameOf.get(b.personId)}: ${b.courseCode} ${activityLabel(b.activity)} ${b.group}, ${clock(b.start)}–${clock(b.end)}${b.room ? `, ${b.room}` : ""}`}
-                    >
-                      <span class="visually-hidden">
-                        {clock(b.start)}–{clock(b.end)},{" "}
-                      </span>
-                      <strong>{b.courseCode}</strong>{" "}
-                      <span class="kind">{activityLabel(b.activity)}</span>{" "}
-                      <span class="who">{nameOf.get(b.personId)}</span>
-                      {sharedIds.has(b.classId) && <span class="visually-hidden">(shared)</span>}
-                    </li>
-                  ))}
+                  {blocks.map((b, k) => {
+                    const id = `slot-${i}-${k}`;
+                    const who = nameOf.get(b.personId) ?? "";
+                    const withWhom = shownIds.filter(
+                      (p) => p !== b.personId && weekSlots.some((o) => o.classId === b.classId && o.personId === p),
+                    );
+                    return (
+                      <li
+                        class:list={["block", { shared: sharedIds.has(b.classId) }]}
+                        style={[
+                          `top: ${b.top}%`,
+                          `height: ${b.height}%`,
+                          `left: ${b.left}%`,
+                          `width: ${b.width}%`,
+                          `--fill: ${colour.get(b.personId)?.fill}`,
+                          `--edge: ${colour.get(b.personId)?.edge}`,
+                        ].join("; ")}
+                      >
+                        {/* the block is a button so the full details are one
+                            tap or keypress away when the lane is too narrow
+                            to show them; the popover needs no script */}
+                        <button type="button" class="block-button" popovertarget={id}>
+                          <span class="visually-hidden">
+                            {clock(b.start)}–{clock(b.end)},{" "}
+                          </span>
+                          <strong>
+                            <span class="prefix">{b.courseCode.slice(0, 4)}</span>
+                            {b.courseCode.slice(4)}
+                          </strong>{" "}
+                          <span class="kind">{activityLabel(b.activity)}</span>{" "}
+                          <span class="who">
+                            <span class="who-full">{who}</span>
+                            <span class="who-short" aria-hidden="true">{who.slice(0, 1)}</span>
+                          </span>
+                          {sharedIds.has(b.classId) && <span class="visually-hidden">(shared)</span>}
+                        </button>
+                        <div popover id={id} class="slot-details" style={`--edge: ${colour.get(b.personId)?.edge}`}>
+                          <p class="slot-who">{who}</p>
+                          <p>
+                            <strong>{b.courseCode}</strong> {b.courseTitle}
+                          </p>
+                          <p>
+                            {activityLabel(b.activity)} {b.group} ({b.activity})
+                          </p>
+                          <p>
+                            {formatDate(addDays(monday, b.day - 1))}, {clock(b.start)}–{clock(b.end)}
+                          </p>
+                          <p>{b.room ?? "No room listed"}</p>
+                          {withWhom.length > 0 && <p>Also here: {list(withWhom)}</p>}
+                          <button type="button" popovertarget={id} popovertargetaction="hide">
+                            Close
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
                   </ol>
                 </div>
               </section>
@@ -221,7 +255,7 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
           ) : (
             <>
               <p>
-                When {list(shownIds)} are all out of class between {clock(FREE_WINDOW.start)} and{" "}
+                When {list(shownIds)} are {shownIds.length === 2 ? "both" : "all"} out of class between {clock(FREE_WINDOW.start)} and{" "}
                 {clock(FREE_WINDOW.end)} in the week of {formatDate(monday)}. It's shaded green on
                 the grid.
               </p>

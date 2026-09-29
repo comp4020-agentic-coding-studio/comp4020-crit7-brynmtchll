@@ -357,3 +357,78 @@ label.confirm input {
   flex: none;
   min-width: 0;
 }
+
+/* --- overlay: blocks as buttons, details in a popover ------------------- */
+
+.block {
+  container-type: inline-size;
+  padding: 0;
+}
+
+.block-button {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0.15rem 0.25rem;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.block-button:focus-visible {
+  outline: 3px solid #1a1a1a;
+  outline-offset: -3px;
+}
+
+.who-short {
+  display: none;
+}
+
+/* narrowing lanes shed the least useful part first: the subject prefix,
+   then (in a clash's sub-lane) the kind and all but an initial */
+@container (max-width: 5.5rem) {
+  .block .prefix {
+    display: none;
+  }
+}
+
+@container (max-width: 3.5rem) {
+  .block .kind,
+  .block .who-full {
+    display: none;
+  }
+
+  .block .who-short {
+    display: inline;
+  }
+
+  .block-button {
+    padding-inline: 0.15rem;
+  }
+}
+
+.slot-details {
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 0.75rem 1rem;
+  border: 1px solid #ccc;
+  border-top: 5px solid var(--edge);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.slot-details p {
+  margin: 0 0 0.35rem;
+}
+
+.slot-details .slot-who {
+  font-weight: 600;
+}
+
+.slot-details::backdrop {
+  background: rgb(0 0 0 / 0.15);
+}

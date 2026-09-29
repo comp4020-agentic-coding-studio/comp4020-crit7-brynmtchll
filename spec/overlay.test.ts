@@ -68,7 +68,7 @@ describe("the overlay", () => {
     );
     expect(Object.keys(ids).sort()).toEqual(["Alex", "Sam", "You"]);
     const onlyAlex = await page(`${OVERLAY}&filtered=1&show=${ids.You}&show=${ids.Alex}`, me.cookie);
-    expect(onlyAlex).toContain('class="who">Alex');
+    expect(onlyAlex).toContain('who-full">Alex');
     expect(onlyAlex).not.toContain("COMP2100");
     const shared = await sharedClasses(`${OVERLAY}&filtered=1&show=${ids.You}&show=${ids.Alex}`);
     expect(shared.some((line) => line.includes("Tutorial 04"))).toBe(false);
