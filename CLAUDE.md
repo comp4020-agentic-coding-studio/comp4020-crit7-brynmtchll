@@ -237,6 +237,7 @@ rest, so a broken build hides every spec result behind it.
     shows one-offs only in their own week
   - `live`: an import is announced on the stream, and only by id
   - `signed-in-a11y`: the axe floor on `/me/` and `/overlay/` with data on them
+  - `migrations`: child rows survive a migration that recreates their parent
 - **evidence** (`pnpm check:evidence`): the submission gate.
   `reflections/crit-7.md` must exist, the `PROCESS.md` template comment must
   be gone, every citation must resolve to a real commit, and `CLAUDE.md` must
@@ -263,8 +264,14 @@ accessibility. Nothing measures performance.
   one table or column while adding another makes it ask whether it's a rename,
   and in a non-interactive shell it fails. Split the change into two
   unambiguous generates (add, then drop).
-- **SQLite only enforces foreign keys when asked**, per connection. `db.ts`
-  turns them on. Keep it that way, since the schema relies on them.
+- **Foreign keys are OFF while migrating and ON after**, in
+  `src/lib/open-db.ts`. When SQLite can't ALTER a change in place,
+  drizzle-kit recreates the table (copy, DROP, rename). Its
+  `PRAGMA foreign_keys=OFF` does nothing inside the migrator's transaction,
+  so with keys on the DROP cascades. Recreating `people` deleted every pick
+  and follow on a scratch copy. Never move the pragma back above `migrate`;
+  `spec/migrations.test.ts` fails if you do. Before deploying any migration,
+  read its SQL for `DROP TABLE`.
 - **One machine, one volume.** The event bus in `src/lib/events.ts` is
   in-process, which only works on one machine. Leave `fly.toml`'s shape alone.
 - **Keep `/api/events` streaming.** CI checks it after every deploy.
