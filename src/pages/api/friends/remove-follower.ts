@@ -15,5 +15,5 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
     // their open overlay reloads, and you're gone from it
     announce({ personId: me.id });
   }
-  return redirect("/me/?follower=removed#visible", 303);
+  return redirect("/friends/?follower=removed#visible", 303);
 };

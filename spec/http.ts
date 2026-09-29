@@ -1,3 +1,4 @@
+import { JSDOM } from "jsdom";
 import { inject } from "vitest";
 
 // Drive the running app the way a browser would: form POSTs carry a
@@ -28,10 +29,32 @@ export async function page(path: string, cookie = "", headers: Record<string, st
   return res.text();
 }
 
+// A request that doesn't follow redirects, to assert where one goes.
+export function get(path: string, cookie = "", headers: Record<string, string> = {}): Promise<Response> {
+  return fetch(new URL(path, baseUrl), { headers: { cookie, ...headers }, redirect: "manual" });
+}
+
+// The page as a person reads it: parsed, so tests assert what's shown
+// rather than how the markup happens to be written.
+export async function doc(path: string, cookie = "", headers: Record<string, string> = {}): Promise<Document> {
+  return new JSDOM(await page(path, cookie, headers)).window.document;
+}
+
+export const text = (node: Node | null | undefined): string =>
+  (node?.textContent ?? "").replace(/\s+/g, " ").trim();
+
+export async function pageText(path: string, cookie = "", headers: Record<string, string> = {}): Promise<string> {
+  return text((await doc(path, cookie, headers)).body);
+}
+
+export async function shareCodeOf(cookie: string): Promise<string | undefined> {
+  return text((await doc("/friends/", cookie)).querySelector(".share-code")) || undefined;
+}
+
 export async function makeTimetable(name: string): Promise<Visitor> {
   const res = await post("/api/people", new URLSearchParams({ name }));
   const cookie = (res.headers.get("set-cookie") ?? "").split(";")[0];
-  const shareCode = (await page("/me/", cookie)).match(/share-code">([A-Z0-9]+)/)?.[1];
+  const shareCode = cookie ? await shareCodeOf(cookie) : undefined;
   if (!cookie || !shareCode) throw new Error(`couldn't make a timetable for ${name}`);
   return { cookie, shareCode };
 }

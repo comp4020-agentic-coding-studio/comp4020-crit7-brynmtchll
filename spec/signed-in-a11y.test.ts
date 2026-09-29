@@ -5,9 +5,9 @@ import { WEEKS, myTimetable, weekly } from "./fixtures/mytimetable";
 import { baseUrl, importCalendar, makeTimetable, page, post } from "./http";
 
 // invariants.test.ts visits each route as a stranger, so it only ever sees
-// the signed-out pages. The real /me/ and /overlay/ — a timetable, friends,
-// the week grid, shared classes, free time — get the same accessibility
-// floor here, signed in with data on them.
+// the signed-out pages. The real /me/, /friends/ and /overlay/ (a
+// timetable, friends, the week grid, shared classes, free time) get the
+// same accessibility floor here, signed in with data on them.
 
 const pages = new Map<string, string>();
 
@@ -27,10 +27,11 @@ beforeAll(async () => {
   await post("/api/friends", new URLSearchParams({ code: friend.shareCode }), me.cookie);
   // the overlay pinned to a week the fixtures' dates fall in
   pages.set("/me/", await page("/me/", me.cookie));
+  pages.set("/friends/", await page("/friends/", me.cookie));
   pages.set("/overlay/", await page("/overlay/?week=2026-09-28", me.cookie));
 });
 
-for (const path of ["/me/", "/overlay/"]) {
+for (const path of ["/me/", "/friends/", "/overlay/"]) {
   describe(`signed in: ${path}`, () => {
     it("has exactly one top-level heading", () => {
       const doc = new JSDOM(pages.get(path)).window.document;

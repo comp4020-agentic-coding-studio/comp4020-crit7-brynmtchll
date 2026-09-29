@@ -9,6 +9,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect, clientAddress
   const me = currentPerson(cookies);
   if (!me) return redirect("/", 303);
   const form = await request.formData();
-  const result = follow(me, String(form.get("code") ?? ""), clientOf(request, clientAddress));
-  return redirect(`/me/?friend=${result}#friends`, 303);
+  const { result, friend } = follow(me, String(form.get("code") ?? ""), clientOf(request, clientAddress));
+  return redirect(`/friends/?friend=${result}${friend ? `&who=${friend.id}` : ""}`, 303);
 };

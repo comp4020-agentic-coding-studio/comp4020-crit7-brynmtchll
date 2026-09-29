@@ -1,72 +1,86 @@
 ---
 import Base from "../layouts/Base.astro";
 import { LIMITED, clientOf, guardedLookup } from "../lib/limits";
-import { currentPerson, normaliseShareCode, personByShareCode } from "../lib/people";
+import { NAME_LENGTH, currentPerson, normaliseShareCode, personByShareCode } from "../lib/people";
 
-const me = currentPerson(Astro.cookies);
-// from a friend's share link, carried through making a timetable
 const add = normaliseShareCode(Astro.url.searchParams.get("add") ?? "");
-// (guarded: a GET that names a code's owner is as good as adding them)
-const found = add ? guardedLookup(clientOf(Astro.request, Astro.clientAddress), () => personByShareCode(add)) : undefined;
+
+// Signed in, the app's home is your week; arriving by a friend's link, it's
+// the offer to add them.
+const me = currentPerson(Astro.cookies);
+if (me) return Astro.redirect(add ? `/friends/?add=${add}` : "/overlay/");
+
+// From a friend's share link, carried through making a timetable. Guarded:
+// a GET that names a code's owner is as good as adding them.
+const found = add
+  ? guardedLookup(clientOf(Astro.request, Astro.clientAddress), () => personByShareCode(add))
+  : undefined;
 const inviter = found === LIMITED ? undefined : found;
 const deleted = Astro.url.searchParams.has("deleted");
 ---
 
-<Base title="Home">
-  <h1>Timetable overlay</h1>
-  <p>
-    See your ANU timetable alongside your friends': who shares your tutes, when
-    you're all free, and who's in class right now.
-  </p>
-  {deleted && <p role="status">Your timetable is deleted.</p>}
+<Base title="Home" width="wide">
   {
-    me ? (
-      <p>
-        Welcome back, {me.name}. Go to <a href={inviter ? `/me/?add=${add}#friends` : "/me/"}>your timetable</a>{" "}
-        or the <a href="/overlay/">overlay</a>.
+    deleted && (
+      <p class="notice success" role="status">
+        Your timetable is deleted, from every device.
       </p>
-    ) : (
-      <>
-        {inviter && (
-          <p>
-            <strong>{inviter.name}</strong> wants to share timetables. Make yours, then add them.
-          </p>
-        )}
-        <form method="post" action="/api/people">
-          <label for="name">Your name, as friends know you</label>
-          <input id="name" name="name" required maxlength="40" autocomplete="nickname" />
-          {inviter && <input type="hidden" name="add" value={add} />}
-          <button>Make my timetable</button>
-        </form>
-        <p>
-          Already have one on another device? <a href="/link/">Link this device</a>.
-        </p>
-
-        <section aria-labelledby="how-heading">
-          <h2 id="how-heading">How it works</h2>
-          <ol class="how">
-            <li>Make a timetable here. It takes a name, and no password.</li>
-            <li>
-              In MyTimetable, export your timetable as a calendar file, and import it. Your
-              classes, rooms and the weeks they run all come from that file.
-            </li>
-            <li>Swap share codes with friends, or send them your share link.</li>
-            <li>
-              Open the overlay: everyone's week on one grid, the classes you share, when you're all
-              free, and who's in class right now. Link your phone to check it on campus.
-            </li>
-          </ol>
-          <figure>
-            <img
-              src="/overlay-example.png"
-              width="1152"
-              height="560"
-              alt="A week grid with three people's classes side by side in their own colours. Shared tutorials and lectures are outlined, and the times all three are free are shaded green."
-            />
-            <figcaption>Three made-up timetables on the overlay.</figcaption>
-          </figure>
-        </section>
-      </>
     )
   }
+  <section class="hero">
+    <h1>{inviter ? `${inviter.name} wants to share timetables with you` : "Your ANU timetable, next to your friends'"}</h1>
+    <p class="lead">
+      {
+        inviter
+          ? `Make yours in a minute, and ${inviter.name}'s week goes next to it: the classes you share, when you're both free, and where they are right now.`
+          : "See who's in your tutes, when you're all free, and who's in class right now. It works from the file MyTimetable already gives you."
+      }
+    </p>
+    <form method="post" action="/api/people" class="card start">
+      <div class="field">
+        <label for="name">Your name</label>
+        <span class="hint" id="name-hint">As friends know you. There's no password.</span>
+        <div class="inline-field">
+          <input
+            id="name"
+            name="name"
+            required
+            maxlength={NAME_LENGTH}
+            autocomplete="nickname"
+            aria-describedby="name-hint"
+          />
+          <button class="primary">Make my timetable</button>
+        </div>
+      </div>
+      {inviter && <input type="hidden" name="add" value={add} />}
+      <p class="fine">
+        Already have one on another device? <a href="/link/">Link this device</a>.
+      </p>
+    </form>
+  </section>
+
+  <section aria-labelledby="how-heading">
+    <h2 id="how-heading">How it works</h2>
+    <ol class="steps">
+      <li>Make a timetable here. It takes a name, and no password.</li>
+      <li>
+        In MyTimetable, export your timetable as a calendar file, and import it. Your classes, rooms
+        and the weeks they run all come from that file.
+      </li>
+      <li>Swap share codes with friends, or send them your link.</li>
+      <li>
+        Open your week: everyone's classes on one grid, the ones you share, when you're all free, and
+        who's in class right now. Link your phone to check it on campus.
+      </li>
+    </ol>
+    <figure>
+      <img
+        src="/overlay-example.png"
+        width="1152"
+        height="560"
+        alt="A week grid with three people's classes side by side in their own colours. Shared tutorials and lectures are outlined, and the times all three are free are shaded green."
+      />
+      <figcaption>Three made-up timetables on one week.</figcaption>
+    </figure>
+  </section>
 </Base>

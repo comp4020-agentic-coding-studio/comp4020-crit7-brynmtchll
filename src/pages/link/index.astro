@@ -18,59 +18,65 @@ const failed = Astro.url.searchParams.has("failed") && !limited;
   <h1>Link this device</h1>
   {
     limited && (
-      <p role="alert">
-        Too many codes that didn't match from here. Wait ten minutes, then make a fresh code on
-        your other device.
+      <p class="notice error" role="alert">
+        Too many codes that didn't match from here. Wait ten minutes, then make a fresh code on your
+        other device.
       </p>
     )
   }
   {
     failed && (
-      <p role="alert">
-        That code didn't work. Codes work once, for ten minutes. Make a new one on your other
-        device.
+      <p class="notice error" role="alert">
+        That code didn't work. Codes work once, for ten minutes. Make a new one on your other device.
       </p>
     )
   }
   {
     owner ? (
-      <>
-        <p>
-          This opens <strong>{owner.name}</strong>'s timetable on this device.
-        </p>
-        {here && here.id !== owner.id && (
+      <section class="card start" aria-labelledby="open-heading">
+        <h2 id="open-heading">Open {owner.name}'s timetable here?</h2>
+        {here && here.id !== owner.id ? (
           <p>
             This device has {here.name}'s timetable at the moment. Linking switches it; {here.name}'s
             timetable stays on any other device it's linked to.
           </p>
+        ) : (
+          <p>This device will have the same timetable, friends and week as the one you linked from.</p>
         )}
         <form method="post" action="/api/devices/claim">
           <input type="hidden" name="code" value={code} />
-          <button>Open {owner.name}'s timetable here</button>
+          <button class="primary">Open {owner.name}'s timetable here</button>
         </form>
-      </>
+      </section>
     ) : (
-      <>
-        {code && !failed && !limited && <p role="alert">That code has expired or been used.</p>}
+      <section class="card" aria-labelledby="enter-heading">
+        <h2 id="enter-heading">Enter a device code</h2>
+        {code && !failed && !limited && (
+          <p class="notice error" role="alert">
+            That code has expired or been used.
+          </p>
+        )}
         <p>
-          On a device that has your timetable, go to <a href="/me/#devices">My timetable</a> and
-          choose "Link another device". Then enter the code here.
+          On a device that has your timetable, open <strong>My timetable</strong>, choose "Link another
+          device", and enter the code it shows.
         </p>
         <form method="get">
           <label for="code">Code</label>
-          <input
-            id="code"
-            name="code"
-            required
-            maxlength="12"
-            autocomplete="one-time-code"
-            autocapitalize="characters"
-            spellcheck="false"
-            placeholder={formatLinkCode("ABCD2345")}
-          />
-          <button>Continue</button>
+          <div class="inline-field">
+            <input
+              id="code"
+              name="code"
+              required
+              maxlength="12"
+              autocomplete="one-time-code"
+              autocapitalize="characters"
+              spellcheck="false"
+              placeholder={formatLinkCode("ABCD2345")}
+            />
+            <button class="primary">Continue</button>
+          </div>
         </form>
-      </>
+      </section>
     )
   }
 </Base>

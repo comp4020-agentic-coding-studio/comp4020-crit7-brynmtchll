@@ -5,5 +5,5 @@ export const POST: APIRoute = ({ cookies, redirect }) => {
   const me = currentPerson(cookies);
   if (!me) return redirect("/", 303);
   rotateShareCode(me);
-  return redirect("/me/?code=new#share", 303);
+  return redirect("/friends/?code=new#share", 303);
 };

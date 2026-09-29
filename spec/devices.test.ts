@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type Visitor, makeTimetable, page, post } from "./http";
+import { type Visitor, makeTimetable, page, post, shareCodeOf } from "./http";
 
 // A timetable can live on several devices: a one-time code made on one
 // device opens it on another, and each device can be signed out alone.
@@ -16,7 +16,7 @@ async function claim(code: string, cookie = ""): Promise<Response> {
 }
 
 const cookieFrom = (res: Response): string => (res.headers.get("set-cookie") ?? "").split(";")[0];
-const shareCodeOn = async (cookie: string) => (await page("/me/", cookie)).match(/share-code">([A-Z0-9]+)/)?.[1];
+const shareCodeOn = shareCodeOf;
 
 describe("linking a device", () => {
   it("opens the same timetable on the second device", async () => {

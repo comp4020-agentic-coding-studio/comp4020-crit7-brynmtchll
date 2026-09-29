@@ -9,22 +9,37 @@ interface Props {
 const { error, first } = Astro.props;
 ---
 
-<section id="import" aria-labelledby="import-heading" class:list={{ start: first }}>
-  <h2 id="import-heading">{first ? "Start here: import your timetable" : "Import from MyTimetable"}</h2>
+<section id="import" class:list={["card", { start: first }]} aria-labelledby="import-heading">
+  <h2 id="import-heading">{first ? "Start here: import your timetable" : "Update from MyTimetable"}</h2>
   <p>
-    In MyTimetable, export your timetable as a calendar (.ics) and upload it here, or paste its
-    contents.{" "}
-    {first
-      ? "Your classes, their rooms and the weeks they run all come from that file."
-      : "Importing again replaces your classes, so do it whenever your allocation changes."}
+    {
+      first
+        ? "In MyTimetable, export your timetable as a calendar (.ics) file, and upload it here. Your classes, their rooms and the weeks they run all come from that file."
+        : "Importing again replaces your classes, so do it whenever your allocation changes."
+    }
   </p>
-  {error && <p role="alert">{error}</p>}
-  <form method="post" action="/api/import" enctype="multipart/form-data" class="stacked">
-    <label for="ics">Calendar file</label>
-    <input id="ics" name="ics" type="file" accept=".ics,text/calendar" />
-    <label for="pasted">…or paste it</label>
-    <textarea id="pasted" name="pasted" rows="4" spellcheck="false" placeholder="BEGIN:VCALENDAR"
-    ></textarea>
-    <button>Import</button>
+  {
+    error && (
+      <p class="notice error" role="alert">
+        {error}
+      </p>
+    )
+  }
+  <form method="post" action="/api/import" enctype="multipart/form-data">
+    <div class="field">
+      <label for="ics">Calendar file</label>
+      <input id="ics" name="ics" type="file" accept=".ics,text/calendar" />
+    </div>
+    <details>
+      <summary>Or paste the file's contents</summary>
+      <div class="field">
+        <label for="pasted">Calendar text</label>
+        <textarea id="pasted" name="pasted" rows="4" spellcheck="false" placeholder="BEGIN:VCALENDAR"
+        ></textarea>
+      </div>
+    </details>
+    <div class="actions">
+      <button class:list={{ primary: first }}>Import</button>
+    </div>
   </form>
 </section>

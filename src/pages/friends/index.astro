@@ -1,0 +1,249 @@
+---
+import Base from "../../layouts/Base.astro";
+import { type FollowResult, followersOf, friendsOf } from "../../lib/friends";
+import { LIMITED, clientOf, guardedLookup } from "../../lib/limits";
+import { personClass } from "../../lib/overlay";
+import { currentPerson, normaliseShareCode, personByShareCode } from "../../lib/people";
+import { slotsFor } from "../../lib/timetable";
+
+// Everything social in one place: your code (the permission to see you),
+// the people on your week, and the people who can see you.
+const me = currentPerson(Astro.cookies);
+const params = Astro.url.searchParams;
+const friends = me ? friendsOf(me) : [];
+const followers = me ? followersOf(me) : [];
+const withTimetable = new Set(slotsFor(friends.map((f) => f.id)).map((s) => s.personId));
+// the same colour each friend has on the week (you're person-0)
+const colourOf = new Map(friends.map((f, i) => [f.id, personClass(i + 1)]));
+const initial = (name: string): string => name.trim().slice(0, 1).toUpperCase();
+
+const shareLink = me ? new URL(`/friends/?add=${me.shareCode}`, Astro.url).href : "";
+
+// Arriving from someone's share link: offer to add them. The GET only
+// offers; the button's POST adds. Looking a code up names its owner, so it
+// counts against the guessing limit like any other lookup.
+const addCode = normaliseShareCode(params.get("add") ?? "");
+const lookedUp = addCode
+  ? guardedLookup(clientOf(Astro.request, Astro.clientAddress), () => personByShareCode(addCode))
+  : undefined;
+const addLimited = lookedUp === LIMITED;
+const invitedBy = lookedUp === LIMITED ? undefined : lookedUp;
+const alreadyFriends = invitedBy ? friends.some((f) => f.id === invitedBy.id) : false;
+
+const outcome = params.get("friend") as FollowResult | null;
+const added = outcome === "added" ? friends.find((f) => String(f.id) === params.get("who")) : undefined;
+const TOO_MANY =
+  "Too many codes that didn't match from here. Wait ten minutes, and check the code with your friend.";
+const FOLLOW_ERRORS: Partial<Record<FollowResult, string>> = {
+  unknown: "No timetable has that code. Check it with your friend.",
+  self: "That's your own code. Give it to a friend instead.",
+  limited: TOO_MANY,
+};
+const followError = outcome ? FOLLOW_ERRORS[outcome] : undefined;
+---
+
+<Base title="Friends">
+  <h1>Friends</h1>
+  {
+    !me ? (
+      <div class="card">
+        <p>
+          You don't have a timetable on this device yet.{" "}
+          {addCode
+            ? "Make one, and then you can add the friend who sent you this link."
+            : "Make one to add friends."}
+        </p>
+        <div class="actions">
+          <a class="button primary" href={addCode ? `/?add=${addCode}` : "/"}>
+            Make a timetable
+          </a>
+          <a class="button" href="/link/">
+            It's on another device
+          </a>
+        </div>
+      </div>
+    ) : (
+      <>
+        {invitedBy && invitedBy.id !== me.id && (
+          <section class="card start" aria-labelledby="invite-heading">
+            <h2 id="invite-heading">Add {invitedBy.name}?</h2>
+            {alreadyFriends ? (
+              <p>
+                {invitedBy.name} is already on <a href="/overlay/">your week</a>.
+              </p>
+            ) : (
+              <>
+                <p>{invitedBy.name} sent you their link. Adding them puts their week next to yours.</p>
+                <form method="post" action="/api/friends">
+                  <input type="hidden" name="code" value={addCode} />
+                  <button class="primary">Add {invitedBy.name}</button>
+                </form>
+              </>
+            )}
+          </section>
+        )}
+        {addCode && !invitedBy && (
+          <p class="notice error" role="alert">
+            {addLimited ? TOO_MANY : "That link doesn't match anyone's timetable. It may have been replaced."}
+          </p>
+        )}
+
+        {added && (
+          <div class="notice success" role="status">
+            <p>Added {added.name}. They're on your week now.</p>
+            <div class="actions">
+              <a class="button small primary" href="/overlay/">
+                See your week
+              </a>
+            </div>
+          </div>
+        )}
+        {outcome === "added" && !added && (
+          <p class="notice success" role="status">
+            Added. They're on your week now.
+          </p>
+        )}
+        {followError && (
+          <p class="notice error" role="alert">
+            {followError}
+          </p>
+        )}
+
+        <section id="share" class="card" aria-labelledby="share-heading">
+          <h2 id="share-heading">Share your timetable</h2>
+          {params.get("code") === "new" && (
+            <p class="notice success" role="status">
+              You have a new code, and the old one no longer works. Anyone who already added you
+              still sees you: remove them below if that's the point.
+            </p>
+          )}
+          <p>Friends add you with your code:</p>
+          <div class="actions">
+            <strong class="share-code code">{me.shareCode}</strong>
+            <button type="button" class="small" data-copy={me.shareCode} hidden>
+              Copy code
+            </button>
+          </div>
+          <label for="share-link" class="spaced">Or send your link</label>
+          <div class="copy-field">
+            <input id="share-link" type="url" value={shareLink} readonly />
+            <button type="button" data-copy={shareLink} hidden>
+              Copy link
+            </button>
+            <button
+              type="button"
+              class="primary"
+              data-share={shareLink}
+              data-share-title={`Add ${me.name}'s timetable`}
+              hidden
+            >
+              Share…
+            </button>
+          </div>
+          <p class="fine">
+            Anyone with your code or link can see your week. Only share it with people you'd tell
+            your timetable to.
+          </p>
+          <details>
+            <summary>Get a new code</summary>
+            <p>
+              A new code stops the old one working for anyone who hasn't used it yet. People who
+              already added you keep seeing you until you remove them.
+            </p>
+            <form method="post" action="/api/people/share-code">
+              <button>Get a new code</button>
+            </form>
+          </details>
+        </section>
+
+        <section id="add" class="card" aria-labelledby="add-heading">
+          <h2 id="add-heading">Add a friend</h2>
+          <form method="post" action="/api/friends">
+            <label for="code">Their share code</label>
+            <p class="hint" id="code-hint">
+              Six letters and numbers, from their Friends page.
+            </p>
+            <div class="inline-field">
+              <input
+                id="code"
+                name="code"
+                required
+                maxlength="12"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                aria-describedby="code-hint"
+              />
+              <button class="primary">Add friend</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="friends" class="card" aria-labelledby="friends-heading">
+          <h2 id="friends-heading">On your week</h2>
+          {friends.length === 0 ? (
+            <div class="empty">
+              <p>No one yet. Share your code above, or ask a friend for theirs.</p>
+            </div>
+          ) : (
+            <ul class="rows">
+              {friends.map((friend) => (
+                <li class={colourOf.get(friend.id)}>
+                  <span class="avatar" aria-hidden="true">
+                    {initial(friend.name)}
+                  </span>
+                  <span class="grow">
+                    <span class="person-name">{friend.name}</span>
+                    {!withTimetable.has(friend.id) && (
+                      <span class="fine"> · hasn't imported a timetable yet</span>
+                    )}
+                  </span>
+                  <form method="post" action="/api/friends/remove">
+                    <input type="hidden" name="friend" value={friend.id} />
+                    <button class="small" aria-label={`Remove ${friend.name} from your week`}>
+                      Remove
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section id="visible" class="card" aria-labelledby="visible-heading">
+          <h2 id="visible-heading">Who can see you</h2>
+          {params.get("follower") === "removed" && (
+            <p class="notice success" role="status">
+              Removed. They'd need your code again to add you back.
+            </p>
+          )}
+          {followers.length === 0 ? (
+            <div class="empty">
+              <p>Nobody has added your code yet.</p>
+            </div>
+          ) : (
+            <>
+              <p>These people added your code, so your week is on theirs.</p>
+              <ul class="rows">
+                {followers.map((follower) => (
+                  <li class={colourOf.get(follower.id) ?? "person-none"}>
+                    <span class="avatar" aria-hidden="true">
+                      {initial(follower.name)}
+                    </span>
+                    <span class="grow person-name">{follower.name}</span>
+                    <form method="post" action="/api/friends/remove-follower">
+                      <input type="hidden" name="follower" value={follower.id} />
+                      <button class="small" aria-label={`Stop ${follower.name} seeing your timetable`}>
+                        Remove
+                      </button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      </>
+    )
+  }
+</Base>

@@ -157,6 +157,19 @@ export function signOutOtherDevices(me: Person, cookies: AstroCookies): void {
 
 // --- your code, and yourself ------------------------------------------------
 
+export const NAME_LENGTH = 40;
+
+export function cleanName(input: string): string {
+  return input.trim().replace(/\s+/g, " ").slice(0, NAME_LENGTH);
+}
+
+// Friends see the new name on their next page load (and open overlays
+// reload on the announcement).
+export function renamePerson(me: Person, name: string): void {
+  db.update(people).set({ name }).where(eq(people.id, me.id)).run();
+  announce({ personId: me.id });
+}
+
 // A new share code stops the old one working for anyone who hasn't used it
 // yet. People who already added you keep seeing you; removing them is
 // removeFollower's job.

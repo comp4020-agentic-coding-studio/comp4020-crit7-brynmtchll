@@ -6,17 +6,17 @@ import { follows, type Person, people } from "./schema";
 
 export type FollowResult = "added" | "unknown" | "self" | "limited";
 
-export function follow(me: Person, code: string, client: string): FollowResult {
+export function follow(me: Person, code: string, client: string): { result: FollowResult; friend?: Person } {
   const friend = guardedLookup(client, () => personByShareCode(code));
-  if (friend === LIMITED) return "limited";
-  if (!friend) return "unknown";
-  if (friend.id === me.id) return "self";
+  if (friend === LIMITED) return { result: "limited" };
+  if (!friend) return { result: "unknown" };
+  if (friend.id === me.id) return { result: "self" };
   // Adding someone twice is harmless: the primary key makes it a no-op.
   db.insert(follows)
     .values({ followerId: me.id, followeeId: friend.id })
     .onConflictDoNothing()
     .run();
-  return "added";
+  return { result: "added", friend };
 }
 
 export function unfollow(me: Person, friendId: number): void {

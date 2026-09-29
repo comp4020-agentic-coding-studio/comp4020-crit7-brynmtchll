@@ -1,60 +1,33 @@
 ---
 import ImportForm from "../../components/ImportForm.astro";
-import { LIMITED, clientOf, guardedLookup } from "../../lib/limits";
 import Base from "../../layouts/Base.astro";
-import { type FollowResult, followersOf, friendsOf } from "../../lib/friends";
-import {
-  currentPerson,
-  deviceCount,
-  formatLinkCode,
-  normaliseShareCode,
-  personByShareCode,
-} from "../../lib/people";
 import { formatDate } from "../../lib/dates";
-import { DAYS, activityLabel, clock, isOneOff, slotsFor } from "../../lib/timetable";
+import { NAME_LENGTH, currentPerson, deviceCount, formatLinkCode } from "../../lib/people";
+import { DAYS, activityLabel, clock, isOneOff, prettyRoom, slotsFor } from "../../lib/timetable";
+
+// Your own data: your classes, where they came from, your name, your
+// devices, and deleting it all. Friends live on /friends/.
+const params = Astro.url.searchParams;
+
+// Share links used to point here; they still work.
+if (params.has("add")) return Astro.redirect(`/friends/?add=${encodeURIComponent(params.get("add") ?? "")}`);
 
 const me = currentPerson(Astro.cookies);
-const friends = me ? friendsOf(me) : [];
 const slots = me ? slotsFor([me.id]) : [];
 const weekly = slots.filter((s) => !isOneOff(s));
+const byDay = DAYS.map((day, i) => ({ day, list: weekly.filter((s) => s.day === i + 1) }));
 const oneOffs = slots
   .filter(isOneOff)
   .sort((a, b) => a.dates[0].localeCompare(b.dates[0]) || a.start - b.start);
+const classCount = new Set(slots.map((s) => s.classId)).size;
 
-const params = Astro.url.searchParams;
-const followers = me ? followersOf(me) : [];
-const shareLink = me ? new URL(`/me/?add=${me.shareCode}`, Astro.url).href : undefined;
-// arriving from someone's share link: offer to add them (a GET only offers;
-// the button's POST adds)
-const addCode = normaliseShareCode(params.get("add") ?? "");
-const lookedUp = addCode
-  ? guardedLookup(clientOf(Astro.request, Astro.clientAddress), () => personByShareCode(addCode))
-  : undefined;
-const addLimited = lookedUp === LIMITED;
-const invitedBy = lookedUp === LIMITED ? undefined : lookedUp;
-const alreadyFriends = invitedBy ? friends.some((f) => f.id === invitedBy.id) : false;
 const devices = me ? deviceCount(me) : 0;
 const linkCode = params.get("link");
 const linkUrl = linkCode ? new URL(`/link/?code=${linkCode}`, Astro.url).href : undefined;
 
-const FOLLOW_MESSAGES: Record<FollowResult, string> = {
-  added: "Friend added. They're on your overlay now.",
-  unknown: "No timetable has that code. Check it with your friend.",
-  self: "That's your own code.",
-  limited: "Too many codes that didn't match from here. Wait ten minutes, and check the code with your friend.",
-};
-const followOutcome = params.get("friend") as FollowResult | null;
-const followMessage = followOutcome ? FOLLOW_MESSAGES[followOutcome] : undefined;
-
-const importMessage = (() => {
+const imported = params.get("import") === "ok";
+const importError = (() => {
   switch (params.get("import")) {
-    case "ok": {
-      const skipped = Number(params.get("skipped"));
-      return (
-        `Imported ${params.get("classes")} classes.` +
-        (skipped > 0 ? ` Skipped ${skipped} weekend sessions.` : "")
-      );
-    }
     case "empty":
       return "No classes found in that. It should be the .ics file MyTimetable exports.";
     case "too-big":
@@ -63,221 +36,197 @@ const importMessage = (() => {
       return undefined;
   }
 })();
-const importError = params.get("import") !== "ok" ? importMessage : undefined;
+const skipped = Number(params.get("skipped") ?? 0);
 ---
 
 <Base title="My timetable">
   <h1>My timetable</h1>
   {
-    me ? (
+    !me ? (
+      <div class="card">
+        <p>You don't have a timetable on this device yet.</p>
+        <div class="actions">
+          <a class="button primary" href="/">
+            Make a timetable
+          </a>
+          <a class="button" href="/link/">
+            It's on another device
+          </a>
+        </div>
+      </div>
+    ) : (
       <>
-        {invitedBy && invitedBy.id !== me.id && (
-          <section class="invite" aria-labelledby="invite-heading">
-            <h2 id="invite-heading">Add {invitedBy.name}?</h2>
-            {alreadyFriends ? (
-              <p>{invitedBy.name} is already on your overlay.</p>
-            ) : (
-              <form method="post" action="/api/friends">
-                <input type="hidden" name="code" value={addCode} />
-                <button>Add {invitedBy.name} to my overlay</button>
-              </form>
-            )}
-          </section>
-        )}
-        {addCode && !invitedBy && (
-          <p role="alert">
-            {addLimited
-              ? FOLLOW_MESSAGES.limited
-              : "That share link doesn't match anyone's timetable. It may have been replaced."}
-          </p>
+        {imported && (
+          <div class="notice success" role="status">
+            <p>
+              Imported {params.get("classes")} classes.
+              {skipped > 0 && ` Skipped ${skipped} weekend sessions.`}
+            </p>
+            <div class="actions">
+              <a class="button small primary" href="/overlay/">
+                See your week
+              </a>
+              <a class="button small" href="/friends/#add">
+                Add friends
+              </a>
+            </div>
+          </div>
         )}
 
         {slots.length === 0 && <ImportForm first error={importError} />}
 
-        <section id="share" aria-labelledby="share-heading">
-          <h2 id="share-heading">Your share code</h2>
-          {params.get("code") === "new" && (
-            <p role="status">
-              New code. The old one no longer works, but anyone who already added you still sees
-              you: remove them below if that's the point.
-            </p>
-          )}
-          <p>
-            Give this to friends so they can overlay your timetable:{" "}
-            <strong class="share-code">{me.shareCode}</strong>
-          </p>
-          <p>
-            Or send the link: <a href={shareLink}>{shareLink}</a>
-          </p>
-          <form method="post" action="/api/people/share-code">
-            <button>Get a new code</button>
-          </form>
-        </section>
-
-        <section id="timetable" aria-labelledby="timetable-heading">
-          <h2 id="timetable-heading">Your classes</h2>
-          {params.get("import") === "ok" && <p role="status">{importMessage}</p>}
-          {slots.length === 0 ? (
-            <p>None yet: import them above.</p>
-          ) : (
-            <ul class="classes">
-              {weekly.map((s) => (
-                <li>
-                  <span class="when">
-                    {DAYS[s.day - 1]} {clock(s.start)}–{clock(s.end)}
-                  </span>{" "}
-                  <strong>{s.courseCode}</strong> {activityLabel(s.activity)} {s.group}
-                  {s.room && <span class="room"> · {s.room}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-          {oneOffs.length > 0 && (
-            <>
-              <h3>One-off sessions</h3>
-              <ul class="classes">
-                {oneOffs.map((s) => (
-                  <li>
-                    <span class="when">
-                      {formatDate(s.dates[0])} {clock(s.start)}–{clock(s.end)}
-                    </span>{" "}
-                    <strong>{s.courseCode}</strong> {activityLabel(s.activity)} {s.group}
-                    {s.room && <span class="room"> · {s.room}</span>}
-                  </li>
+        {slots.length > 0 && (
+          <section id="timetable" class="card" aria-labelledby="timetable-heading">
+            <div class="card-head">
+              <h2 id="timetable-heading">Your classes</h2>
+              <span class="fine">{classCount} classes, from your MyTimetable export</span>
+            </div>
+            <dl class="days">
+              {byDay
+                .filter((d) => d.list.length > 0)
+                .map((d) => (
+                  <>
+                    <dt>{d.day}</dt>
+                    <dd>
+                      <ul class="rows">
+                        {d.list.map((s) => (
+                          <li>
+                            <span class="when">
+                              <span class="visually-hidden">{d.day} </span>
+                              {clock(s.start)}–{clock(s.end)}
+                            </span>
+                            <span class="grow">
+                              <strong>{s.courseCode}</strong> {activityLabel(s.activity)} {s.group}
+                              {s.room && <span class="room"> · {prettyRoom(s.room)}</span>}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </dd>
+                  </>
                 ))}
-              </ul>
-            </>
-          )}
-        </section>
+            </dl>
+            {oneOffs.length > 0 && (
+              <>
+                <h3>One-off sessions</h3>
+                <ul class="rows">
+                  {oneOffs.map((s) => (
+                    <li>
+                      <span class="when">
+                        {formatDate(s.dates[0])} {clock(s.start)}–{clock(s.end)}
+                      </span>
+                      <span class="grow">
+                        <strong>{s.courseCode}</strong> {activityLabel(s.activity)} {s.group}
+                        {s.room && <span class="room"> · {prettyRoom(s.room)}</span>}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+        )}
 
         {slots.length > 0 && <ImportForm first={false} error={importError} />}
 
-        <section id="devices" aria-labelledby="devices-heading">
+        <section id="name" class="card" aria-labelledby="name-heading">
+          <h2 id="name-heading">Your name</h2>
+          {params.get("renamed") === "1" && (
+            <p class="notice success" role="status">
+              Saved. Friends see the new name from now on.
+            </p>
+          )}
+          {params.get("renamed") === "empty" && (
+            <p class="notice error" role="alert">
+              A name can't be empty.
+            </p>
+          )}
+          <form method="post" action="/api/people/rename">
+            <label for="rename">Friends see you as</label>
+            <div class="inline-field">
+              <input
+                id="rename"
+                name="name"
+                value={me.name}
+                required
+                maxlength={NAME_LENGTH}
+                autocomplete="nickname"
+              />
+              <button>Save</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="devices" class="card" aria-labelledby="devices-heading">
           <h2 id="devices-heading">Your devices</h2>
+          {params.get("devices") === "signed-out" && (
+            <p class="notice success" role="status">
+              Signed out everywhere else. Only this device has your timetable now.
+            </p>
+          )}
           <p>
             {devices === 1
-              ? "Your timetable is only on this device. Link another (your phone, say) so you can check it on the go, and so losing this one doesn't lose it."
+              ? "Your timetable is only on this device. Link your phone so you can check it on campus, and so losing this device doesn't lose it."
               : `Your timetable is on ${devices} devices.`}
           </p>
-          {params.get("devices") === "signed-out" && (
-            <p role="status">Signed out everywhere else. Only this device has your timetable now.</p>
-          )}
           {linkCode && linkUrl ? (
-            <div class="link-code" role="status">
+            <div class="notice" role="status">
               <p>
-                On your other device, open <a href={linkUrl}>{linkUrl}</a>, or go to{" "}
-                <strong>/link</strong> and enter <strong class="share-code">{formatLinkCode(linkCode)}</strong>.
+                On your other device, open this link, or go to <strong>/link</strong> and enter{" "}
+                <strong class="code">{formatLinkCode(linkCode)}</strong>
               </p>
-              <p class="muted small">
+              <div class="copy-field">
+                <input aria-label="Link for your other device" type="url" value={linkUrl} readonly />
+                <button type="button" data-copy={linkUrl} hidden>
+                  Copy link
+                </button>
+              </div>
+              <p class="fine">
                 It works once, in the next ten minutes. Anyone with it can open your timetable, so
                 only send it to yourself.
               </p>
             </div>
           ) : (
             <form method="post" action="/api/devices/link">
-              <button>Link another device</button>
+              <button class="primary">Link another device</button>
             </form>
           )}
-          <div class="device-actions">
+          <div class="actions">
             {devices > 1 && (
               <form method="post" action="/api/devices/sign-out">
                 <input type="hidden" name="which" value="others" />
-                <button>Sign out other devices</button>
+                <button class="small">Sign out other devices</button>
               </form>
             )}
             <form method="post" action="/api/devices/sign-out">
               <input type="hidden" name="which" value="this" />
-              <button>
+              <button class="small">
                 {devices > 1 ? "Sign out this device" : "Sign out (this loses your timetable)"}
               </button>
             </form>
           </div>
         </section>
 
-        <section id="friends" aria-labelledby="friends-heading">
-          <h2 id="friends-heading">Friends</h2>
-          {followMessage && <p role="status">{followMessage}</p>}
-          <form method="post" action="/api/friends">
-            <label for="code">Add a friend by their share code</label>
-            <input
-              id="code"
-              name="code"
-              required
-              maxlength="12"
-              autocomplete="off"
-              autocapitalize="characters"
-              spellcheck="false"
-            />
-            <button>Add friend</button>
-          </form>
-          <h3>On your overlay</h3>
-          {friends.length === 0 ? (
-            <p>No one yet. Ask someone for their code.</p>
-          ) : (
-            <ul class="friends">
-              {friends.map((friend) => (
-                <li>
-                  <span>{friend.name}</span>
-                  <form method="post" action="/api/friends/remove">
-                    <input type="hidden" name="friend" value={friend.id} />
-                    <button aria-label={`Remove ${friend.name} from your overlay`}>Remove</button>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section id="visible" aria-labelledby="visible-heading">
-          <h2 id="visible-heading">Who can see you</h2>
-          {params.get("follower") === "removed" && (
-            <p role="status">Removed. They'd need your code again to add you back.</p>
-          )}
-          {followers.length === 0 ? (
-            <p>Nobody has added your code yet.</p>
-          ) : (
-            <>
-              <p>These people added your code, so your week is on their overlay.</p>
-              <ul class="friends">
-                {followers.map((follower) => (
-                  <li>
-                    <span>{follower.name}</span>
-                    <form method="post" action="/api/friends/remove-follower">
-                      <input type="hidden" name="follower" value={follower.id} />
-                      <button aria-label={`Stop ${follower.name} seeing your timetable`}>Remove</button>
-                    </form>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
-
-        <section id="delete" aria-labelledby="delete-heading" class="danger">
+        <section id="delete" class="card danger-zone" aria-labelledby="delete-heading">
           <h2 id="delete-heading">Delete your timetable</h2>
           <p>
             This deletes your timetable, your friends list and your share code, from every device,
-            and takes you off everyone's overlay. It can't be undone.
+            and takes you off everyone's week. It can't be undone.
           </p>
           {params.get("delete") === "unconfirmed" && (
-            <p role="alert">Tick the box to confirm. Nothing was deleted.</p>
+            <p class="notice error" role="alert">
+              Tick the box to confirm. Nothing was deleted.
+            </p>
           )}
-          <form method="post" action="/api/people/delete" class="stacked">
+          <form method="post" action="/api/people/delete">
             <label class="confirm">
               <input type="checkbox" name="confirm" value="yes" required />
               I understand this can't be undone
             </label>
-            <button>Delete my timetable</button>
+            <button class="danger-button">Delete my timetable</button>
           </form>
         </section>
       </>
-    ) : (
-      <p>
-        You don't have a timetable on this device yet.{" "}
-        <a href={addCode ? `/?add=${addCode}` : "/"}>Make one</a>, which takes a name
-        {addCode && ", and then you can add the friend who sent you here"}. If it's on another
-        device of yours, <a href="/link/">link this one</a>.
-      </p>
     )
   }
 </Base>

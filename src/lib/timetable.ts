@@ -24,6 +24,16 @@ export function activityLabel(activity: string): string {
   return KINDS[activity.slice(0, 3)] ?? activity;
 }
 
+// Allocate+ joins a room's parts with underscores ("Rm 4.03_Marie Reay Bldg
+// 155"); people read them with commas.
+export function prettyRoom(room: string): string {
+  return room
+    .split("_")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
 // An import is the whole timetable: the person's picks and meetings are
 // replaced, not merged, so re-importing after a MyTimetable change is how
 // you update. Classes are shared, so a class someone else imported first is
