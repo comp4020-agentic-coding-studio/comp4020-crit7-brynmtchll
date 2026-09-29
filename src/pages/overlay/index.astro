@@ -157,9 +157,18 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
               teaching break or outside semester.
             </p>
           )}
+          <nav aria-label="Days" class="day-tabs">
+            {DAYS.map((day, i) => (
+              <a href={`#day-${i}`} aria-current={isThisWeek && now.day - 1 === i ? "date" : undefined}>
+                {day}
+              </a>
+            ))}
+          </nav>
+          <div class="week-scroll">
           <div
             class="week"
             style={`--hours: ${(grid.to - grid.from) / 60}`}
+            data-today={isThisWeek && isWeekday ? now.day - 1 : undefined}
           >
             <div class="hours" aria-hidden="true">
               {hours.map((h) => (
@@ -246,6 +255,7 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
               </section>
             ))}
           </div>
+          </div>
         </section>
 
         <section aria-labelledby="free-heading">
@@ -308,6 +318,12 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
   // button does the same.
   const form = document.querySelector<HTMLFormElement>("#people");
   form?.addEventListener("change", () => form.requestSubmit());
+
+  // On a phone the grid is one day per screen; start on today's.
+  const today = document.querySelector<HTMLElement>(".week")?.dataset.today;
+  if (today && matchMedia("(max-width: 40rem)").matches) {
+    document.querySelector(`#day-${today}`)?.closest(".day")?.scrollIntoView({ inline: "start", block: "nearest" });
+  }
 
   // Live: when anyone on this overlay re-imports, the stream says who, and
   // the page reloads to pick up their new timetable from the server. It also

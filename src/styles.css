@@ -134,7 +134,7 @@ main.wide {
 
 /* --- overlay: the week grid ------------------------------------------------ */
 
-.week-wrap {
+.week-scroll {
   /* the grid scrolls sideways on a phone; the page never does */
   overflow-x: auto;
 }
@@ -431,4 +431,55 @@ label.confirm input {
 
 .slot-details::backdrop {
   background: rgb(0 0 0 / 0.15);
+}
+
+/* --- phones: one day per screen, swiped, with the hours pinned ------------ */
+
+.day-tabs {
+  display: none;
+}
+
+@media (max-width: 40rem) {
+  .day-tabs {
+    display: flex;
+    justify-content: space-between;
+    margin-block: 0.75rem 0.25rem;
+  }
+
+  .day-tabs a {
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    text-decoration: none;
+  }
+
+  .day-tabs a[aria-current] {
+    background: #d6e6ff;
+    font-weight: 600;
+  }
+
+  body {
+    padding: 1rem;
+  }
+
+  .week-scroll {
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 2.6rem;
+    overscroll-behavior-x: contain;
+  }
+
+  .week {
+    grid-template-columns: 2.6rem repeat(5, calc(100% - 2.6rem));
+    min-width: 0;
+  }
+
+  .day {
+    scroll-snap-align: start;
+  }
+
+  .hours {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    background: #fff;
+  }
 }
