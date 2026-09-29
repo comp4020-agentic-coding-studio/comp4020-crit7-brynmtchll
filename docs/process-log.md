@@ -391,3 +391,43 @@ follow without a code. It's only allowed for a removal that really deleted a
 row. The forged remove-then-undo attack is a test, and it lets the attacker
 through when that check is removed.
 
+## 24. Review and refine
+
+> review and refine
+
+Reviewed the site with harder data than the demo (eight people, a
+40-character name, a one-off, a clash, a friend with no timetable, a
+follower who isn't a friend), and the drafts against what now exists.
+[`36b4091`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/36b4091)
+
+Reversal: the grid's fixed lane per person (entry 8's decision) collapsed at
+eight people, with every class a 24px sliver. It's now calendar-style
+packing, where only overlapping classes split a day's width. The lane layout
+existed so a gap across all lanes read as free time, which the free-time
+bands now show directly.
+
+Also:
+
+- Right now summarises everyone who isn't in class or free in a line
+  instead of a row each.
+- Big groups read as a count.
+- Share and device links are shown whole: an input had been cutting off the
+  code at their end.
+- Allocate+'s `01_Clone` reads as words.
+- The grid gets a heading, so the heading levels don't skip.
+- An unused notice style was removed.
+
+A new bug from a refinement: making the phone chips one scrolling row made
+the page 908px wide, because a fieldset's minimum size is its content's
+width. Two false alarms, ruled out by measuring rather than trusting the
+screenshot: the phone grid "opening on Monday" and "hiding its labels" were
+both artefacts of full-page screenshots resetting a scroll-snap container.
+
+Re-checked after: 137 tests, the 18-step journey, and real-browser axe
+across 52 page/theme/width combinations, all on the stress data.
+
+Drafts: `PROCESS.md` gained the interface round and the reversal (8
+citations, 285 words). The reflection lost two rhythmic triads, against my
+voice rules. The README gained the packing and its test. All still
+uncommitted for me to review.
+

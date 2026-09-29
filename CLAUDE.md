@@ -310,6 +310,8 @@ rest, so a broken build hides every spec result behind it.
   - `undo`: undo reverses your own real removal, and can't be used to follow
     someone whose code you never had
   - `not-found`: a wrong address is a real 404 inside the app
+  - `grid`: classes split a day's width only when they overlap, so a lone
+    class gets the full width however many people are shown
 - **evidence** (`pnpm check:evidence`): the submission gate.
   `reflections/crit-7.md` must exist, the `PROCESS.md` template comment must
   be gone, every citation must resolve to a real commit, and `CLAUDE.md` must
@@ -430,6 +432,17 @@ in `pnpm check`, because they need Chrome. Nothing measures performance.
   `inline-flex`, which silently overrode `hidden` on every "only when the
   browser can" button. `[hidden] { display: none !important }` is in the
   base styles for that reason; don't remove it.
+- **Review with hard data, not the demo.** The tidy three-person seed hid
+  that one lane per person collapses at eight: every class became a 24px
+  sliver. Seed eight people, a 40-character name, a one-off, a clash and a
+  friend with no timetable before judging a layout.
+- **A fieldset won't shrink to scroll.** Its minimum size is its content's
+  width, so `overflow-x: auto` on a nowrap fieldset made the phone page 908px
+  wide until `min-inline-size: 0`.
+- **Full-page screenshots lie about nested scroll.** Resizing to the full
+  height resets a scroll-snap container part-way, so the phone grid looked
+  broken when it wasn't. Judge scroll positions from a viewport screenshot,
+  or by measuring `scrollLeft`.
 - **Get real data before designing the schema.** The first schema was
   designed from an idea of what a timetable is, and one real export broke it
   (LecA/LecB, lab parts, rooms that are `NA`). It also showed that the planned
