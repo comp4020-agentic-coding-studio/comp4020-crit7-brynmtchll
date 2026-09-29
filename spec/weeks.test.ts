@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { myTimetable, weekly } from "./fixtures/mytimetable";
-import { type Visitor, importCalendar, makeTimetable, page } from "./http";
+import { type Visitor, doc, importCalendar, makeTimetable, page, text } from "./http";
 
 // The grid shows a real week, going by the dates in the export: a class the
 // export leaves out of a week (Labour Day, the teaching break) isn't drawn
@@ -29,10 +29,9 @@ beforeAll(async () => {
   );
 });
 
-// just the week grid: "Right now" above it runs on the real clock
+// just the week grid, as text: "Right now" above it runs on the real clock
 async function grid(week: string): Promise<string> {
-  const html = await page(`/overlay/?week=${week}`, me.cookie);
-  return html.split('id="week-heading"')[1]?.split('id="free-heading"')[0] ?? "";
+  return text((await doc(`/overlay/?week=${week}`, me.cookie)).querySelector("#grid"));
 }
 
 describe("the week grid", () => {
@@ -58,7 +57,8 @@ describe("the week grid", () => {
   });
 
   it("snaps any date to the Monday of its week", async () => {
-    expect(await grid("2026-10-07")).toContain("Week of Mon 5 Oct");
+    const heading = text((await doc("/overlay/?week=2026-10-07", me.cookie)).querySelector("#week-heading"));
+    expect(heading).toContain("Week of Mon 5 Oct");
   });
 });
 

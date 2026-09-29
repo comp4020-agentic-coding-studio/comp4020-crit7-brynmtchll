@@ -179,6 +179,13 @@ img {
   height: auto;
 }
 
+/* The hidden attribute has to win over every display rule below (buttons
+   are inline-flex), or "hidden until the browser can do it" buttons show
+   regardless. */
+[hidden] {
+  display: none !important;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -1008,7 +1015,7 @@ figcaption {
   outline-offset: -2px;
 }
 
-.swatch.free {
+.swatch.free-mark {
   border: 1px solid var(--grid-line);
   background: repeating-linear-gradient(135deg, var(--free-a) 0 4px, var(--free-b) 4px 8px);
 }
@@ -1037,7 +1044,12 @@ figcaption {
 }
 
 .week-scroll {
-  /* the grid scrolls sideways on a phone; the page never does */
+  /* the grid scrolls sideways on a phone; the page never does. The
+     position matters: without it, an absolutely positioned descendant with
+     no nearer positioned ancestor (the visually hidden "(today)" in a day
+     heading) is laid out against the page, escapes this box's clipping,
+     and made the whole phone page 150px wider. */
+  position: relative;
   overflow-x: auto;
 }
 
@@ -1105,7 +1117,7 @@ figcaption {
 }
 
 /* free together: a band across every lane, behind the classes */
-.free {
+.free-band {
   position: absolute;
   right: 0;
   left: 0;

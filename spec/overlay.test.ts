@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { WEEKS, myTimetable, weekly } from "./fixtures/mytimetable";
-import { type Visitor, importCalendar, makeTimetable, page, post } from "./http";
+import { type Visitor, doc, importCalendar, makeTimetable, page, post, text } from "./http";
 
 // The overlay's promises, driven over HTTP against the running app: a friend
 // added by code is on your grid on the next page load, and "you share a
@@ -37,13 +37,15 @@ beforeAll(async () => {
   }
 });
 
-// the "Classes you share" section's list items, as text
+// the "Classes you share" list, as text
 async function sharedClasses(path = OVERLAY): Promise<string[]> {
-  const html = await page(path, me.cookie);
-  const section = html.split('id="shared-heading"')[1] ?? "";
-  return [...section.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) =>
-    m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim(),
-  );
+  const page = await doc(path, me.cookie);
+  return [...page.querySelectorAll('[aria-labelledby="shared-heading"] li')].map((li) => text(li));
+}
+
+// just the week grid, as text ("Right now" above it runs on the real clock)
+async function gridText(cookie: string, path = OVERLAY): Promise<string> {
+  return text((await doc(path, cookie)).querySelector("#grid"));
 }
 
 describe("the overlay", () => {
@@ -62,14 +64,16 @@ describe("the overlay", () => {
   });
 
   it("drops a friend from the grid when they're toggled off", async () => {
-    const html = await page(OVERLAY, me.cookie);
+    const chips = [...(await doc(OVERLAY, me.cookie)).querySelectorAll<HTMLInputElement>('input[name="show"]')];
     const ids = Object.fromEntries(
-      [...html.matchAll(/value="(\d+)"[^>]*>\s*(You|Sam|Alex)/g)].map((m) => [m[2], m[1]]),
+      chips.map((input) => [text(input.closest("label")?.querySelector(".chip-name")), input.value]),
     );
     expect(Object.keys(ids).sort()).toEqual(["Alex", "Sam", "You"]);
-    const onlyAlex = await page(`${OVERLAY}&filtered=1&show=${ids.You}&show=${ids.Alex}`, me.cookie);
-    expect(onlyAlex).toContain('who-full">Alex');
-    expect(onlyAlex).not.toContain("COMP2100");
+    const path = `${OVERLAY}&filtered=1&show=${ids.You}&show=${ids.Alex}`;
+    const whoIsOnGrid = [...(await doc(path, me.cookie)).querySelectorAll(".block .who-full")].map((el) => text(el));
+    expect(whoIsOnGrid).toContain("Alex");
+    expect(whoIsOnGrid).not.toContain("Sam");
+    expect(await page(path, me.cookie)).not.toContain("COMP2100");
     const shared = await sharedClasses(`${OVERLAY}&filtered=1&show=${ids.You}&show=${ids.Alex}`);
     expect(shared.some((line) => line.includes("Tutorial 04"))).toBe(false);
   });
@@ -78,12 +82,10 @@ describe("the overlay", () => {
 describe("free together", () => {
   // the "Free together" list, one line per weekday
   async function freeTimes(): Promise<Record<string, string>> {
-    const html = await page(OVERLAY, me.cookie);
-    const section = html.split('id="free-heading"')[1]?.split("</section>")[0] ?? "";
+    const page = await doc(OVERLAY, me.cookie);
     return Object.fromEntries(
-      [...section.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) => {
-        const text = m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-        const [day, times] = text.split(": ");
+      [...page.querySelectorAll('[aria-labelledby="free-heading"] li')].map((li) => {
+        const [day, times] = text(li).split(": ");
         return [day, times];
       }),
     );
@@ -109,7 +111,7 @@ describe("someone else's import", () => {
     );
     await importCalendar(stranger, myTimetable(moved));
 
-    const week = (await page(OVERLAY, me.cookie)).split('id="week-heading"')[1]?.split('id="free-heading"')[0] ?? "";
+    const week = await gridText(me.cookie);
     expect(week).toContain("10:30–12:00"); // our tute, where our exports put it
     expect(week).not.toContain("07:00–08:00");
   });

@@ -59,3 +59,11 @@ export function formatDate(date: string): string {
   const d = utc(date);
   return `${WEEKDAYS[weekdayOf(date) - 1]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 }
+
+// "35 min", "1 h", "2 h 10 min": how long until something, at a glance.
+export function duration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}

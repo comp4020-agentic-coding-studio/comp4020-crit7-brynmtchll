@@ -1,9 +1,10 @@
 ---
 import Base from "../../layouts/Base.astro";
-import { ISO_DATE, addDays, canberraNow, formatDate, mondayOf } from "../../lib/dates";
+import { ISO_DATE, addDays, canberraNow, duration, formatDate, mondayOf } from "../../lib/dates";
 import { friendsOf } from "../../lib/friends";
 import {
   FREE_WINDOW,
+  type Status,
   freeTogether,
   inWeek,
   personClass,
@@ -11,8 +12,8 @@ import {
   sharedWith,
   statusAt,
 } from "../../lib/overlay";
-import { currentPerson } from "../../lib/people";
-import { DAYS, activityLabel, clock, slotsFor } from "../../lib/timetable";
+import { currentPerson, deviceCount } from "../../lib/people";
+import { DAYS, activityLabel, clock, prettyRoom, slotsFor } from "../../lib/timetable";
 
 const me = currentPerson(Astro.cookies);
 const everyone = me ? [me, ...friendsOf(me)] : [];
@@ -27,6 +28,7 @@ const shownIds = shown.map((p) => p.id);
 
 const colourOf = new Map(everyone.map((p, i) => [p.id, personClass(i)]));
 const nameOf = new Map(everyone.map((p) => [p.id, p.id === me?.id ? "You" : p.name]));
+const initial = (id: number): string => (nameOf.get(id) ?? "?").slice(0, 1).toUpperCase();
 
 // Which week the grid shows: ?week= snaps to its Monday. Otherwise it's
 // this week, or next week once this one's teaching days are over.
@@ -41,6 +43,9 @@ const monday =
       ? thisMonday
       : addDays(thisMonday, 7);
 const isThisWeek = monday === thisMonday;
+// "right now" belongs with the week it's in (or, at the weekend, the one
+// coming up), not with some week you've paged to
+const showNow = isThisWeek || (!isWeekday && monday === addDays(thisMonday, 7));
 const weekLink = (target: string): string => {
   const next = new URLSearchParams(params);
   next.set("week", target);
@@ -58,13 +63,9 @@ const shared = me ? sharedWith(slots, me.id, shownIds) : [];
 const free = shownIds.length >= 2 ? freeTogether(weekSlots, shownIds) : [];
 const freeByDay = DAYS.map((_, i) => free.filter((g) => g.day === i + 1));
 const pct = (minutes: number): number => ((minutes - grid.from) / (grid.to - grid.from)) * 100;
+const todayIndex = isThisWeek && isWeekday ? now.day - 1 : undefined;
 const nowLine =
-  isThisWeek && isWeekday && now.minutes >= grid.from && now.minutes <= grid.to
-    ? pct(now.minutes)
-    : undefined;
-const weekIsEmpty = weekSlots.length === 0 && slots.some((s) => shownIds.includes(s.personId));
-const where = (s: { courseCode: string; activity: string; room: string | null }): string =>
-  `${s.courseCode} ${activityLabel(s.activity)}${s.room ? ` (${s.room})` : ""}`;
+  todayIndex !== undefined && now.minutes >= grid.from && now.minutes <= grid.to ? pct(now.minutes) : undefined;
 const sharedIds = new Set(shared.map((c) => c.classId));
 const list = (ids: number[]): string => {
   // mid-sentence, so "you" rather than the legend's "You"
@@ -72,240 +73,381 @@ const list = (ids: number[]): string => {
   return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
 };
 const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => grid.from + i * 60);
+
+// Empty weeks, told apart: nobody's imported anything, or the exports say
+// nothing runs this week (the teaching break, or outside semester).
+const shownHaveClasses = slots.some((s) => shownIds.includes(s.personId));
+const iHaveClasses = me ? hasTimetable.has(me.id) : false;
+
+// Getting started, until it's done (or hidden on this device).
+const steps = me
+  ? [
+      { label: "Import your timetable", hint: "from MyTimetable", href: "/me/#import", done: iHaveClasses },
+      { label: "Add a friend", hint: "share your link, or enter their code", href: "/friends/#share", done: everyone.length > 1 },
+      { label: "Link your phone", hint: "to check your week on campus", href: "/me/#devices", done: deviceCount(me) > 1 },
+    ]
+  : [];
+const stepsDone = steps.filter((s) => s.done).length;
+const showWelcome = steps.length > 0 && stepsDone < steps.length && Astro.cookies.get("welcome")?.value !== "hidden";
+
+const where = (s: { courseCode: string; activity: string; room: string | null }): string =>
+  `${s.courseCode} ${activityLabel(s.activity)}${s.room ? ` · ${prettyRoom(s.room)}` : ""}`;
+const describe = (status: Status): { chip: string; tone: string; detail: string } => {
+  switch (status.state) {
+    case "in-class":
+      return {
+        chip: "In class",
+        tone: "in-class",
+        detail: `${where(status.slot)}, until ${clock(status.slot.end)} (${duration(status.slot.end - now.minutes)})`,
+      };
+    case "free":
+      return {
+        chip: "Free",
+        tone: "free",
+        detail: `until ${clock(status.next.start)} (${duration(status.next.start - now.minutes)}), then ${where(status.next)}`,
+      };
+    case "done":
+      return { chip: "Done for today", tone: "", detail: "" };
+    case "off":
+      return {
+        chip: "No classes today",
+        tone: "",
+        detail: `The usual ${DAYS[now.day - 1]} classes aren't on: a public holiday or the teaching break.`,
+      };
+    default:
+      return { chip: "No classes today", tone: "", detail: "" };
+  }
+};
 ---
 
 <Base title="Week" width="wide">
-  <h1>Overlay</h1>
   {
     !me ? (
-      <p>
-        You don't have a timetable on this device yet. <a href="/">Make one</a>, import your
-        MyTimetable export, and add friends to see them here.
-      </p>
+      <>
+        <h1>Your week</h1>
+        <div class="card">
+          <p>You don't have a timetable on this device yet.</p>
+          <div class="actions">
+            <a class="button primary" href="/">
+              Make a timetable
+            </a>
+            <a class="button" href="/link/">
+              It's on another device
+            </a>
+          </div>
+        </div>
+      </>
     ) : (
       <>
+        <div class="page-head">
+          <h1 id="week-heading">
+            Week of {formatDate(monday)} {isThisWeek && <span class="pill">This week</span>}
+          </h1>
+          <nav aria-label="Weeks" class="segmented">
+            <a href={weekLink(addDays(monday, -7))} rel="prev" aria-keyshortcuts="ArrowLeft" data-key="ArrowLeft">
+              ← Previous
+            </a>
+            {!isThisWeek && <a href={weekLink(thisMonday)}>This week</a>}
+            <a href={weekLink(addDays(monday, 7))} rel="next" aria-keyshortcuts="ArrowRight" data-key="ArrowRight">
+              Next →
+            </a>
+          </nav>
+        </div>
+
+        {showWelcome && (
+          <section class="card start" aria-labelledby="welcome-heading">
+            <div class="card-head">
+              <h2 id="welcome-heading">Getting started</h2>
+              <span class="fine">
+                {stepsDone} of {steps.length} done
+              </span>
+            </div>
+            <div class="progress" aria-hidden="true">
+              <span style={`width: ${(stepsDone / steps.length) * 100}%`} />
+            </div>
+            <ul class="checklist">
+              {steps.map((step) => (
+                <li class:list={{ done: step.done }}>
+                  <span class="check" aria-hidden="true">
+                    {step.done ? "✓" : ""}
+                  </span>
+                  <span>
+                    {step.done ? (
+                      <span class="step">
+                        {step.label}
+                        <span class="visually-hidden"> (done)</span>
+                      </span>
+                    ) : (
+                      <a class="step" href={step.href}>
+                        {step.label}
+                      </a>
+                    )}
+                    <span class="fine"> · {step.hint}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <form method="post" action="/api/welcome" class="actions">
+              <button class="small quiet">Hide this</button>
+            </form>
+          </section>
+        )}
+
         <form method="get" class="people" id="people" data-watch={everyone.map((p) => p.id).join(" ")}>
           <input type="hidden" name="filtered" value="1" />
           {requested && <input type="hidden" name="week" value={monday} />}
           <fieldset>
-            <legend>Show</legend>
+            <legend>Showing</legend>
             {everyone.map((p) => (
-              <label class={colourOf.get(p.id)}>
+              <label class:list={["chip", colourOf.get(p.id)]}>
                 <input type="checkbox" name="show" value={p.id} checked={shownIds.includes(p.id)} />
-                {nameOf.get(p.id)}
-                {!hasTimetable.has(p.id) && <span class="muted"> (no timetable yet)</span>}
+                <span class="dot" aria-hidden="true" />
+                <span class="chip-name">{nameOf.get(p.id)}</span>
+                {!hasTimetable.has(p.id) && <span class="fine">(no timetable yet)</span>}
               </label>
             ))}
           </fieldset>
-          <button>Update</button>
+          <button class="small apply">Update</button>
+          {everyone.length === 1 && (
+            <a class="button small quiet" href="/friends/#share">
+              + Add friends
+            </a>
+          )}
         </form>
 
-        {everyone.length === 1 && (
-          <p>
-            It's just you so far. <a href="/friends/#add">Add friends</a> by their share code to
-            overlay them.
-          </p>
+        {showNow && (
+          <section class="card" aria-labelledby="now-heading">
+            <div class="card-head">
+              <h2 id="now-heading">Right now</h2>
+              <span class="fine">
+                {isWeekday ? DAYS[now.day - 1] : "Weekend"} {clock(now.minutes)} in Canberra
+              </span>
+            </div>
+            {!isWeekday ? (
+              <p>It's the weekend. Nobody has class.</p>
+            ) : (
+              <ul class="rows now-list">
+                {shown.map((p) => {
+                  const d = describe(statusAt(slots, p.id, now));
+                  return (
+                    <li class={colourOf.get(p.id)}>
+                      <span class="avatar" aria-hidden="true">
+                        {initial(p.id)}
+                      </span>
+                      <span class="grow">
+                        <strong>{nameOf.get(p.id)}</strong>{" "}
+                        <span class:list={["status", d.tone]}>{d.chip}</span>
+                        {d.detail && <span class="detail">{d.detail}</span>}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
         )}
 
-        <section aria-labelledby="now-heading">
-          <h2 id="now-heading">
-            Right now <span class="muted">· {isWeekday ? DAYS[now.day - 1] : "Weekend"} {clock(now.minutes)} in Canberra</span>
-          </h2>
-          {!isWeekday ? (
-            <p>It's the weekend. Nobody has class.</p>
+        <section id="grid" class="card week-card" aria-label={`The week of ${formatDate(monday)}`}>
+          {!shownHaveClasses ? (
+            <div class="empty">
+              {iHaveClasses || shownIds.length === 0 ? (
+                <p>Nobody shown has imported a timetable yet. Turn someone on above.</p>
+              ) : (
+                <>
+                  <p>Your week is empty until you import your timetable.</p>
+                  <a class="button primary" href="/me/#import">
+                    Import from MyTimetable
+                  </a>
+                </>
+              )}
+            </div>
           ) : (
-            <ul class="now-list">
-              {shown.map((p) => {
-                const status = statusAt(slots, p.id, now);
-                const who = nameOf.get(p.id);
-                const verb = p.id === me.id ? "are" : "is";
-                return (
-                  <li class={colourOf.get(p.id)}>
-                    <strong>{who}</strong>{" "}
-                    {status.state === "in-class"
-                      ? `${verb} in ${where(status.slot)} until ${clock(status.slot.end)}`
-                      : status.state === "free"
-                        ? `${verb} free until ${clock(status.next.start)}, then ${where(status.next)}`
-                        : status.state === "done"
-                          ? `${p.id === me.id ? "are" : "is"} done for the day`
-                          : status.state === "off"
-                            ? `${p.id === me.id ? "have" : "has"} no classes today: the usual ${DAYS[now.day - 1]} classes aren't on (a public holiday or the teaching break)`
-                            : `${p.id === me.id ? "have" : "has"} no classes today`}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-        </section>
-
-        <section aria-labelledby="week-heading" class="week-wrap">
-          <div class="week-head">
-            <h2 id="week-heading">
-              Week of {formatDate(monday)}
-              {isThisWeek && <span class="muted"> · this week</span>}
-            </h2>
-            <nav aria-label="Weeks" class="week-nav">
-              <a href={weekLink(addDays(monday, -7))}>← Previous week</a>
-              {!isThisWeek && <a href={weekLink(thisMonday)}>This week</a>}
-              <a href={weekLink(addDays(monday, 7))}>Next week →</a>
-            </nav>
-          </div>
-          {weekIsEmpty && (
-            <p role="status">
-              Nobody shown has classes this week. Their exports say nothing runs, so it's the
-              teaching break or outside semester.
-            </p>
+            weekSlots.length === 0 && (
+              <p class="notice" role="status">
+                Nobody shown has classes this week. Their exports say nothing runs, so it's the teaching
+                break or outside semester.
+              </p>
+            )
           )}
           <nav aria-label="Days" class="day-tabs">
             {DAYS.map((day, i) => (
-              <a href={`#day-${i}`} aria-current={isThisWeek && now.day - 1 === i ? "date" : undefined}>
+              <a href={`#day-${i}`} aria-current={todayIndex === i ? "date" : undefined}>
                 {day}
               </a>
             ))}
           </nav>
           <div class="week-scroll">
-          <div
-            class="week"
-            style={`--hours: ${(grid.to - grid.from) / 60}`}
-            data-today={isThisWeek && isWeekday ? now.day - 1 : undefined}
-          >
-            <div class="hours" aria-hidden="true">
-              {hours.map((h) => (
-                <span style={`top: ${((h - grid.from) / (grid.to - grid.from)) * 100}%`}>
-                  {clock(h)}
-                </span>
+            <div class="week" style={`--hours: ${(grid.to - grid.from) / 60}`} data-today={todayIndex}>
+              <div class="hours" aria-hidden="true">
+                {hours.map((h) => (
+                  <span style={`top: ${((h - grid.from) / (grid.to - grid.from)) * 100}%`}>{clock(h)}</span>
+                ))}
+              </div>
+              {grid.days.map((blocks, i) => (
+                <section class:list={["day", { today: todayIndex === i }]} aria-labelledby={`day-${i}`}>
+                  <h3 id={`day-${i}`}>
+                    {DAYS[i]} <span class="date">{formatDate(addDays(monday, i)).split(" ")[1]}</span>
+                    {todayIndex === i && <span class="visually-hidden"> (today)</span>}
+                  </h3>
+                  <div class="day-body">
+                    {nowLine !== undefined && todayIndex === i && (
+                      <div class="now" aria-hidden="true" style={`top: ${nowLine}%`} />
+                    )}
+                    {freeByDay[i].map((g) => (
+                      <div
+                        class="free-band"
+                        aria-hidden="true"
+                        style={`top: ${pct(g.start)}%; height: ${pct(g.end) - pct(g.start)}%`}
+                      />
+                    ))}
+                    <ol class="blocks">
+                      {blocks.map((b, k) => {
+                        const id = `slot-${i}-${k}`;
+                        const who = nameOf.get(b.personId) ?? "";
+                        const withWhom = shownIds.filter(
+                          (p) =>
+                            p !== b.personId && weekSlots.some((o) => o.classId === b.classId && o.personId === p),
+                        );
+                        return (
+                          <li
+                            class:list={["block", colourOf.get(b.personId), { shared: sharedIds.has(b.classId) }]}
+                            style={`top: ${b.top}%; height: ${b.height}%; left: ${b.left}%; width: ${b.width}%`}
+                          >
+                            {/* the block is a button so the full details are one
+                                tap or keypress away when the lane is too narrow
+                                to show them; the popover needs no script */}
+                            <button
+                              type="button"
+                              class="block-button"
+                              popovertarget={id}
+                              style={`anchor-name: --${id}`}
+                            >
+                              <span class="visually-hidden">
+                                {clock(b.start)}–{clock(b.end)},{" "}
+                              </span>
+                              <strong>
+                                <span class="prefix">{b.courseCode.slice(0, 4)}</span>
+                                {b.courseCode.slice(4)}
+                              </strong>{" "}
+                              <span class="kind">{activityLabel(b.activity)}</span>{" "}
+                              <span class="who">
+                                <span class="who-full">{who}</span>
+                                <span class="who-short" aria-hidden="true">
+                                  {who.slice(0, 1)}
+                                </span>
+                              </span>
+                              {sharedIds.has(b.classId) && <span class="visually-hidden">(shared)</span>}
+                            </button>
+                            <div
+                              popover
+                              id={id}
+                              class:list={["slot-details", colourOf.get(b.personId)]}
+                              style={`position-anchor: --${id}`}
+                            >
+                              <p class="slot-who">{who}</p>
+                              <p>
+                                <strong>{b.courseCode}</strong> {b.courseTitle}
+                              </p>
+                              <p>
+                                {activityLabel(b.activity)} {b.group} ({b.activity})
+                              </p>
+                              <p>
+                                {formatDate(addDays(monday, b.day - 1))}, {clock(b.start)}–{clock(b.end)}
+                              </p>
+                              <p>{b.room ? prettyRoom(b.room) : "No room listed"}</p>
+                              {withWhom.length > 0 && <p>Also here: {list(withWhom)}</p>}
+                              <button type="button" class="small" popovertarget={id} popovertargetaction="hide">
+                                Close
+                              </button>
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </div>
+                </section>
               ))}
             </div>
-            {grid.days.map((blocks, i) => (
-              <section class="day" aria-labelledby={`day-${i}`}>
-                <h3 id={`day-${i}`}>
-                  {DAYS[i]} <span class="date">{formatDate(addDays(monday, i)).split(" ")[1]}</span>
-                </h3>
-                <div class="day-body">
-                  {nowLine !== undefined && i === now.day - 1 && (
-                    <div class="now" aria-hidden="true" style={`top: ${nowLine}%`} />
-                  )}
-                  {freeByDay[i].map((g) => (
-                    <div
-                      class="free"
-                      aria-hidden="true"
-                      style={`top: ${pct(g.start)}%; height: ${pct(g.end) - pct(g.start)}%`}
-                    />
-                  ))}
-                  <ol class="blocks">
-                  {blocks.map((b, k) => {
-                    const id = `slot-${i}-${k}`;
-                    const who = nameOf.get(b.personId) ?? "";
-                    const withWhom = shownIds.filter(
-                      (p) => p !== b.personId && weekSlots.some((o) => o.classId === b.classId && o.personId === p),
-                    );
-                    return (
-                      <li
-                        class:list={["block", colourOf.get(b.personId), { shared: sharedIds.has(b.classId) }]}
-                        style={[
-                          `top: ${b.top}%`,
-                          `height: ${b.height}%`,
-                          `left: ${b.left}%`,
-                          `width: ${b.width}%`,
-                        ].join("; ")}
-                      >
-                        {/* the block is a button so the full details are one
-                            tap or keypress away when the lane is too narrow
-                            to show them; the popover needs no script */}
-                        <button type="button" class="block-button" popovertarget={id}>
-                          <span class="visually-hidden">
-                            {clock(b.start)}–{clock(b.end)},{" "}
-                          </span>
-                          <strong>
-                            <span class="prefix">{b.courseCode.slice(0, 4)}</span>
-                            {b.courseCode.slice(4)}
-                          </strong>{" "}
-                          <span class="kind">{activityLabel(b.activity)}</span>{" "}
-                          <span class="who">
-                            <span class="who-full">{who}</span>
-                            <span class="who-short" aria-hidden="true">{who.slice(0, 1)}</span>
-                          </span>
-                          {sharedIds.has(b.classId) && <span class="visually-hidden">(shared)</span>}
-                        </button>
-                        <div popover id={id} class:list={["slot-details", colourOf.get(b.personId)]}>
-                          <p class="slot-who">{who}</p>
-                          <p>
-                            <strong>{b.courseCode}</strong> {b.courseTitle}
-                          </p>
-                          <p>
-                            {activityLabel(b.activity)} {b.group} ({b.activity})
-                          </p>
-                          <p>
-                            {formatDate(addDays(monday, b.day - 1))}, {clock(b.start)}–{clock(b.end)}
-                          </p>
-                          <p>{b.room ?? "No room listed"}</p>
-                          {withWhom.length > 0 && <p>Also here: {list(withWhom)}</p>}
-                          <button type="button" popovertarget={id} popovertargetaction="hide">
-                            Close
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                  </ol>
-                </div>
-              </section>
-            ))}
           </div>
-          </div>
+          <ul class="legend" aria-label="Key">
+            <li>
+              <span class="swatch shared" aria-hidden="true" /> A class you share
+            </li>
+            {shownIds.length >= 2 && (
+              <li>
+                <span class="swatch free-mark" aria-hidden="true" /> Everyone shown is free
+              </li>
+            )}
+            {nowLine !== undefined && (
+              <li>
+                <span class="swatch now-mark" aria-hidden="true" /> Now
+              </li>
+            )}
+            <li>Select a class for its room and who's in it.</li>
+          </ul>
         </section>
 
-        <section aria-labelledby="free-heading">
-          <h2 id="free-heading">Free together</h2>
-          {shownIds.length < 2 ? (
-            <p>Show a friend above to find time you're all free.</p>
-          ) : (
-            <>
-              <p>
-                When {list(shownIds)} are {shownIds.length === 2 ? "both" : "all"} out of class between {clock(FREE_WINDOW.start)} and{" "}
-                {clock(FREE_WINDOW.end)} in the week of {formatDate(monday)}. It's shaded green on
-                the grid.
-              </p>
-              <ul class="free-list">
-                {DAYS.map((day, i) => (
+        <div class="columns">
+          <section class="card" aria-labelledby="free-heading">
+            <h2 id="free-heading">Free together</h2>
+            {shownIds.length < 2 ? (
+              <p class="muted">Show a friend above to find time you're all free.</p>
+            ) : (
+              <>
+                <p class="fine">
+                  When {list(shownIds)} {shownIds.length === 2 ? "are both" : "are all"} out of class,{" "}
+                  {clock(FREE_WINDOW.start)}–{clock(FREE_WINDOW.end)}.
+                </p>
+                <ul class="free-list">
+                  {DAYS.map((day, i) => (
+                    <li>
+                      <strong class="day-name">{day}</strong>
+                      <span class="visually-hidden">: </span>
+                      {freeByDay[i].length === 0 ? (
+                        <span class="muted">no time you're all free</span>
+                      ) : (
+                        freeByDay[i].map((g, k) => (
+                          <>
+                            {k > 0 && <span class="visually-hidden">, </span>}
+                            <span class="time">
+                              {clock(g.start)}–{clock(g.end)}
+                            </span>
+                          </>
+                        ))
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+
+          <section class="card" aria-labelledby="shared-heading">
+            <h2 id="shared-heading">Classes you share</h2>
+            {shownIds.length < 2 ? (
+              <p class="muted">Show a friend above to see which classes you share.</p>
+            ) : shared.length === 0 ? (
+              <p class="muted">You don't share any classes with {list(shownIds.filter((id) => id !== me.id))}.</p>
+            ) : (
+              <ul class="shared-list">
+                {shared.map((c) => (
                   <li>
-                    <strong>{day}</strong>:{" "}
-                    {freeByDay[i].length === 0
-                      ? "no time you're all free"
-                      : freeByDay[i].map((g) => `${clock(g.start)}–${clock(g.end)}`).join(", ")}
+                    <strong>{c.courseCode}</strong> {activityLabel(c.activity)} {c.group},{" "}
+                    {c.meetings
+                      .map((m) =>
+                        m.dates.length === 1
+                          ? `${formatDate(m.dates[0])} ${clock(m.start)}–${clock(m.end)}`
+                          : `${DAYS[m.day - 1]} ${clock(m.start)}–${clock(m.end)}`,
+                      )
+                      .join(" and ")}{" "}
+                    with {list(c.friends)}
+                    {c.meetings[0].room && <span class="room"> · {prettyRoom(c.meetings[0].room)}</span>}
                   </li>
                 ))}
               </ul>
-            </>
-          )}
-        </section>
-
-        <section aria-labelledby="shared-heading">
-          <h2 id="shared-heading">Classes you share</h2>
-          {shownIds.length < 2 ? (
-            <p>Show a friend above to see which classes you share.</p>
-          ) : shared.length === 0 ? (
-            <p>You don't share any classes with {list(shownIds.filter((id) => id !== me.id))}.</p>
-          ) : (
-            <ul class="shared-list">
-              {shared.map((c) => (
-                <li>
-                  <strong>{c.courseCode}</strong> {activityLabel(c.activity)} {c.group},{" "}
-                  {c.meetings
-                    .map((m) =>
-                      m.dates.length === 1
-                        ? `${formatDate(m.dates[0])} ${clock(m.start)}–${clock(m.end)}`
-                        : `${DAYS[m.day - 1]} ${clock(m.start)}–${clock(m.end)}`,
-                    )
-                    .join(" and ")}{" "}
-                  with {list(c.friends)}
-                  {c.meetings[0].room && <span class="room"> · {c.meetings[0].room}</span>}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+            )}
+          </section>
+        </div>
       </>
     )
   }
@@ -313,9 +455,20 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
 
 <script>
   // Toggling a person applies straight away; without JavaScript the Update
-  // button does the same.
+  // button does the same, so it only shows when there's no script.
   const form = document.querySelector<HTMLFormElement>("#people");
   form?.addEventListener("change", () => form.requestSubmit());
+  const apply = form?.querySelector<HTMLButtonElement>(".apply");
+  if (apply) apply.hidden = true;
+
+  // ← and → page between weeks, unless you're typing somewhere.
+  document.addEventListener("keydown", (event) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("input, textarea, select, [contenteditable]")) return;
+    const link = document.querySelector<HTMLAnchorElement>(`.segmented [data-key="${event.key}"]`);
+    if (link) location.href = link.href;
+  });
 
   // On a phone the grid is one day per screen; start on today's.
   const today = document.querySelector<HTMLElement>(".week")?.dataset.today;
