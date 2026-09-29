@@ -1,0 +1,30 @@
+---
+// The MyTimetable import. It sits wherever /me/ needs it: first, as the one
+// thing to do, until a timetable exists; lower down once it's a refresh.
+interface Props {
+  error?: string;
+  first: boolean;
+}
+
+const { error, first } = Astro.props;
+---
+
+<section id="import" aria-labelledby="import-heading" class:list={{ start: first }}>
+  <h2 id="import-heading">{first ? "Start here: import your timetable" : "Import from MyTimetable"}</h2>
+  <p>
+    In MyTimetable, export your timetable as a calendar (.ics) and upload it here, or paste its
+    contents.{" "}
+    {first
+      ? "Your classes, their rooms and the weeks they run all come from that file."
+      : "Importing again replaces your classes, so do it whenever your allocation changes."}
+  </p>
+  {error && <p role="alert">{error}</p>}
+  <form method="post" action="/api/import" enctype="multipart/form-data" class="stacked">
+    <label for="ics">Calendar file</label>
+    <input id="ics" name="ics" type="file" accept=".ics,text/calendar" />
+    <label for="pasted">…or paste it</label>
+    <textarea id="pasted" name="pasted" rows="4" spellcheck="false" placeholder="BEGIN:VCALENDAR"
+    ></textarea>
+    <button>Import</button>
+  </form>
+</section>

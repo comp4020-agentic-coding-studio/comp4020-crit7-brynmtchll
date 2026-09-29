@@ -485,3 +485,39 @@ label.confirm input {
     background: #fff;
   }
 }
+
+#import.start {
+  padding: 0.25rem 1rem 1rem;
+  border: 2px solid #2f6fd6;
+  border-radius: 6px;
+  background: #f3f7ff;
+}
+
+.how {
+  padding-inline-start: 1.4rem;
+}
+
+.how li {
+  margin-block: 0.4rem;
+}
+
+figure {
+  margin: 1.5rem 0 0;
+}
+
+figure img {
+  width: 100%;
+  height: auto;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+}
+
+figcaption {
+  font-size: 0.85rem;
+  color: #555;
+}
+
+main img {
+  max-width: 100%;
+  height: auto;
+}

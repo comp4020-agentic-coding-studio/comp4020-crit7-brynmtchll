@@ -1,4 +1,5 @@
 ---
+import ImportForm from "../../components/ImportForm.astro";
 import Base from "../../layouts/Base.astro";
 import { type FollowResult, followersOf, friendsOf } from "../../lib/friends";
 import {
@@ -56,6 +57,7 @@ const importMessage = (() => {
       return undefined;
   }
 })();
+const importError = params.get("import") !== "ok" ? importMessage : undefined;
 ---
 
 <Base title="My timetable">
@@ -79,6 +81,8 @@ const importMessage = (() => {
         {addCode && !invitedBy && (
           <p role="alert">That share link doesn't match anyone's timetable. It may have been replaced.</p>
         )}
+
+        {slots.length === 0 && <ImportForm first error={importError} />}
 
         <section id="share" aria-labelledby="share-heading">
           <h2 id="share-heading">Your share code</h2>
@@ -104,7 +108,7 @@ const importMessage = (() => {
           <h2 id="timetable-heading">Your classes</h2>
           {params.get("import") === "ok" && <p role="status">{importMessage}</p>}
           {slots.length === 0 ? (
-            <p>Nothing yet. Import your MyTimetable export below.</p>
+            <p>None yet: import them above.</p>
           ) : (
             <ul class="classes">
               {weekly.map((s) => (
@@ -136,25 +140,7 @@ const importMessage = (() => {
           )}
         </section>
 
-        <section id="import" aria-labelledby="import-heading">
-          <h2 id="import-heading">Import from MyTimetable</h2>
-          <p>
-            In MyTimetable, export your timetable as a calendar (.ics) and upload it here, or
-            paste its contents. Importing again replaces your classes, so do it whenever your
-            allocation changes.
-          </p>
-          {importMessage && params.get("import") !== "ok" && (
-            <p role="alert">{importMessage}</p>
-          )}
-          <form method="post" action="/api/import" enctype="multipart/form-data" class="stacked">
-            <label for="ics">Calendar file</label>
-            <input id="ics" name="ics" type="file" accept=".ics,text/calendar" />
-            <label for="pasted">…or paste it</label>
-            <textarea id="pasted" name="pasted" rows="4" spellcheck="false"
-              placeholder="BEGIN:VCALENDAR"></textarea>
-            <button>Import</button>
-          </form>
-        </section>
+        {slots.length > 0 && <ImportForm first={false} error={importError} />}
 
         <section id="devices" aria-labelledby="devices-heading">
           <h2 id="devices-heading">Your devices</h2>

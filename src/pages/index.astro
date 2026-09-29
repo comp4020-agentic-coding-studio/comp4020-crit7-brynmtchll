@@ -38,6 +38,31 @@ const deleted = Astro.url.searchParams.has("deleted");
         <p>
           Already have one on another device? <a href="/link/">Link this device</a>.
         </p>
+
+        <section aria-labelledby="how-heading">
+          <h2 id="how-heading">How it works</h2>
+          <ol class="how">
+            <li>Make a timetable here. It takes a name, and no password.</li>
+            <li>
+              In MyTimetable, export your timetable as a calendar file, and import it. Your
+              classes, rooms and the weeks they run all come from that file.
+            </li>
+            <li>Swap share codes with friends, or send them your share link.</li>
+            <li>
+              Open the overlay: everyone's week on one grid, the classes you share, when you're all
+              free, and who's in class right now. Link your phone to check it on campus.
+            </li>
+          </ol>
+          <figure>
+            <img
+              src="/overlay-example.png"
+              width="1152"
+              height="560"
+              alt="A week grid with three people's classes side by side in their own colours. Shared tutorials and lectures are outlined, and the times all three are free are shaded green."
+            />
+            <figcaption>Three made-up timetables on the overlay.</figcaption>
+          </figure>
+        </section>
       </>
     )
   }

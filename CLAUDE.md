@@ -256,6 +256,7 @@ rest, so a broken build hides every spec result behind it.
   - `privacy`: who can see you and removing them, a new code retiring the
     old one, deletion reaching friends' overlays, and a share link carried
     through sign-up
+  - `images`: every image on every route loads as a plain file
 - **evidence** (`pnpm check:evidence`): the submission gate.
   `reflections/crit-7.md` must exist, the `PROCESS.md` template comment must
   be gone, every citation must resolve to a real commit, and `CLAUDE.md` must
@@ -318,6 +319,12 @@ tab at 4.05:1), now fixed. Rerun it after any colour change. It isn't in
   host, so root-absolute links (`href="/me/"`) are correct here. This inverts
   A2's rule, where the platform derived `base` and a root-absolute link
   404'd. Don't port the old rule back in.
+- **README images are raw `<img src="public/...">`, never `![](...)`.**
+  Astro turns a markdown image into a link to its runtime optimiser
+  (`/_image`), which needs sharp at runtime and answered 500 on a scratch
+  server. `readme.astro` rewrites a raw tag's `public/` path to the static
+  file, and GitHub renders both. `spec/images.test.ts` fails on any `/_image`
+  src.
 - Commit `pnpm-lock.yaml`: CI and the Dockerfile install with
   `--frozen-lockfile`.
 
@@ -346,6 +353,14 @@ tab at 4.05:1), now fixed. Rerun it after any colour change. It isn't in
 - **When a spec test greps built output, don't quote-match narrowly.** The
   production minifier rewrites string literals as template literals, so a
   `["']` character class reads a working page as broken.
+- **A browser script's failure can be the script.** Playwright's `tap` and
+  `click` don't wait for the navigation a form submit starts. Checking the
+  URL straight after, or navigating away, races the response, and the Set-Cookie
+  never lands. Wait for the URL before calling the app broken.
+- **Prove a guard fails by breaking the real file, not a stand-in.** A
+  `git stash` meant to put back a broken README put back one with no image
+  at all, and the test "failed to fail" vacuously. Copy the good file aside,
+  break the working copy, run, and restore.
 - **Get real data before designing the schema.** The first schema was
   designed from an idea of what a timetable is, and one real export broke it
   (LecA/LecB, lab parts, rooms that are `NA`). It also showed that the planned

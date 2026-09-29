@@ -8,6 +8,8 @@ exports, swap share codes with friends, and see everyone's classes side by
 side: the classes you share, the gaps when you're all free, and where
 everyone is right now.
 
+<img src="public/overlay-example.png" width="1152" height="560" alt="Three made-up timetables on the overlay: each person's classes in their own colour, shared classes outlined, and the times all three are free shaded green">
+
 ## What good looks like here
 
 **It starts from the data students already have.** The first plan was a
