@@ -216,9 +216,14 @@ Read every paragraph back and cut the half that carries no claim.
   like, open it in a browser (the `agent-browser` CLI, documented on
   [the course site](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/backpressure/#agent-browser-the-rendered-page-as-ground-truth)).
   The rendered page is the truth; your mental model of it isn't. The pages
-  that matter are signed in. With no `timetable` cookie, `/me/` and
-  `/overlay/` render an empty state, so a screenshot of them without one shows
-  nothing about the work.
+  that matter are signed in. With no `timetable` cookie, `/overlay/`,
+  `/friends/` and `/me/` render an empty state, so a screenshot of them
+  without one shows nothing about the work. Look at light and dark, at
+  1280px and 390px.
+- While the repo is private, deploy from a clean checkout of `HEAD` (a
+  `git worktree`), not the working folder: `flyctl deploy` uploads whatever
+  is on disk, and uncommitted drafts (the README is served at `/readme/`)
+  would go live unreviewed.
 - While the repo is private, deploy by hand from the repo root with the token
   in `mise.local.toml`:
   `flyctl deploy --remote-only --ha=false -a comp4020-crit7-brynmtchll`. Then
@@ -231,6 +236,36 @@ Read every paragraph back and cut the half that carries no claim.
   Treat a red check as authoritative — the app is wrong until the check is
   green, not until you decide it should be.
 - Commit when the checks pass. Never commit a red state.
+
+## The interface: patterns I hold it to
+
+- **Colours come from tokens.** Every colour is a custom property on `:root`,
+  defined once for light and once for dark in `src/styles.css`. Components
+  use the tokens, never raw values. The one exception is `.qr`, which stays
+  white so it scans.
+- **People's colours are `.person-N` classes** (`personClass(i)` in
+  `src/lib/overlay.ts`), in overlay order with you first, and the same
+  person has the same colour on every page. Never inline a colour: inline
+  styles can't switch with the theme.
+- **One primary button per task.** Everything else is secondary. Deletion is
+  `.danger-button`, kept apart in a danger zone.
+- **Outcomes are notices where they happened.** Use `.notice` with
+  `success`/`error`, `role="status"` or `role="alert"`, and a next step when
+  there's an obvious one ("See your week").
+- **Removing is immediate, with undo.** Don't add an "are you sure?".
+  Deletion is the exception, because it can't be undone, and it takes a
+  ticked box.
+- **Enhancements start hidden.** Copy, Share and the like carry `hidden` and
+  only appear when the browser can do them. The page must work without
+  JavaScript: forms are plain GET and POST, and the week's Update button
+  is there for no-script.
+- **Friends and your own data are separate pages.** `/friends/` holds
+  anything social (codes, who's on your week, who can see you). `/me/` holds
+  your data (classes, import, name, devices, deletion). Signed in, `/` is
+  your week.
+- **Tests read pages the way a person does.** Use `doc()` and `text()` in
+  `spec/http.ts`, and select by headings and labels, not regexes over
+  markup, which break on a class name and can pass vacuously.
 
 ## The checks (my sensors)
 
@@ -267,6 +302,14 @@ rest, so a broken build hides every spec result behind it.
   - `images`: every image on every route loads as a plain file
   - `limits`: too many failed code lookups refuse a client, even for a right
     code, across every place codes are looked up
+  - `pages`: where things live: `/` sends a signed-in person to their week,
+    the nav marks the current page, old `/me/?add=` links redirect, renaming
+  - `week-page`: the getting-started checklist, the empty week, and Right now
+    only on the current week
+  - `qr`: each QR code draws exactly the link shown beside it
+  - `undo`: undo reverses your own real removal, and can't be used to follow
+    someone whose code you never had
+  - `not-found`: a wrong address is a real 404 inside the app
 - **evidence** (`pnpm check:evidence`): the submission gate.
   `reflections/crit-7.md` must exist, the `PROCESS.md` template comment must
   be gone, every citation must resolve to a real commit, and `CLAUDE.md` must
@@ -279,11 +322,15 @@ rest, so a broken build hides every spec result behind it.
   internal links.
 
 axe in jsdom has colour contrast switched off and is not the whole of
-accessibility. Contrast needs a real browser: on 29 Sep the full axe rule set
-was run by hand in headless Chrome over every page, signed in with data, at
-1280px and 390px. It found one failure jsdom couldn't see (today's phone day
-tab at 4.05:1), now fixed. Rerun it after any colour change. It isn't in
-`pnpm check` because it needs Chrome. Nothing measures performance.
+accessibility. Contrast needs a real browser, so the full axe rule set is run
+by hand in headless Chrome. The run covers 13 page states (signed in and out,
+after an invite, a removal, an import, with a class's details open), in
+light and dark, at 1280px and 390px. The first run found one failure jsdom
+couldn't see (today's phone day tab at 4.05:1); after the redesign all 52
+were clean. Rerun it after any colour change. Also by hand in a real
+browser: page width at 390px (via `scrollWidth`), the QR codes decoded with
+a QR reader, and the two-person journey through the UI. None of these are
+in `pnpm check`, because they need Chrome. Nothing measures performance.
 
 ## Platform traps (the rest is in the starter's comments)
 
@@ -371,6 +418,18 @@ tab at 4.05:1), now fixed. Rerun it after any colour change. It isn't in
   `git stash` meant to put back a broken README put back one with no image
   at all, and the test "failed to fail" vacuously. Copy the good file aside,
   break the working copy, run, and restore.
+- **Check phone overflow against the width you set, not `innerWidth`.**
+  With mobile emulation, the browser widens the layout viewport to fit
+  content that overflows, so `scrollWidth > innerWidth` stays false while
+  the page is 150px too wide. Compare `scrollWidth` to 390.
+- **A visually hidden span can widen the page.** It's `position: absolute`,
+  so with no positioned ancestor inside a scroll box it's laid out against
+  the page and escapes the box's clipping. Scroll containers get
+  `position: relative`.
+- **An author `display` rule beats the `hidden` attribute.** Buttons are
+  `inline-flex`, which silently overrode `hidden` on every "only when the
+  browser can" button. `[hidden] { display: none !important }` is in the
+  base styles for that reason; don't remove it.
 - **Get real data before designing the schema.** The first schema was
   designed from an idea of what a timetable is, and one real export broke it
   (LecA/LecB, lab parts, rooms that are `NA`). It also showed that the planned

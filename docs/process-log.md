@@ -329,3 +329,65 @@ deployment: 20 bad device codes, each with a different forged
 the real address. Side effect: this laptop's address couldn't look up codes
 on the live site for ten minutes.
 
+## 22. The last steps
+
+> ok so where is it at
+
+> ok lets get to work on the last steps
+
+`PROCESS.md` and the reflection are my account, so the agent drafted
+`PROCESS.md` from this log and asked me for the reflection's substance
+instead of inventing it. My answers:
+
+- breakthrough: **the export knew the dates**
+- who I want to be: **ground before designing**, and **direct, then verify**
+- README: **voice pass, I review**
+
+The drafts pass `check:evidence` and sit inside the 150–300 word guidance,
+but they're deliberately uncommitted until I've read them. The agent flagged
+where the README said "I" about things it had done (reading ANU's pages,
+deciding against URL import). The course plugins were updated (0.14.24).
+
+## 23. A UX and UI round
+
+> still time and budget, iterate on the site again, focus on ux ui patterns
+
+> continue
+
+Started with a screenshot audit of every page, signed in and out, desktop and
+phone. It found a dead-end home page for returning users, a nav misaligned
+with the content, Astro's own 404 page, one long `/me/` mixing social and
+personal things, and every button the same grey. Then, in stages:
+
+- a design system (tokens for light and dark, header, button hierarchy,
+  notices, a real 404): [`4ff5824`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/4ff5824)
+- information architecture (signed-in `/` goes to the week; `/friends/`
+  split from `/me/`; old share links redirect; renaming): [`a38b026`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/a38b026)
+- QR codes for the share link and for linking a phone: [`6ed3cc9`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/6ed3cc9)
+- the week page rebuilt (week as heading, checklist, chips, status, legend,
+  empty states, anchored popovers): [`8c9aa39`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/8c9aa39)
+- undo for removals, instead of confirmation: [`4309575`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/4309575)
+
+Found by looking, not by the tests:
+
+- `button { display: inline-flex }` beat the `hidden` attribute, so every
+  "only when the browser can" button always showed.
+- A global `.free` class absolutely positioned the legend swatch, and would
+  have done the same to the "Free" status chip.
+- A visually hidden "(today)" escaped the grid's scroll box and made the
+  phone page 150px wider. My earlier overflow checks had compared against
+  `innerWidth`, which mobile emulation widens to fit, so they'd been
+  vacuous.
+
+Checked in a real browser:
+
+- the QR codes, decoded with a QR reader in both themes
+- the full axe rule set, contrast included, over 13 page states × 2 themes
+  × 2 widths, all clean
+- the two-person journey rewritten for the new UI (18 steps, all pass)
+
+Undo is a security question as much as a UX one, since it re-creates a
+follow without a code. It's only allowed for a removal that really deleted a
+row. The forged remove-then-undo attack is a test, and it lets the attacker
+through when that check is removed.
+
