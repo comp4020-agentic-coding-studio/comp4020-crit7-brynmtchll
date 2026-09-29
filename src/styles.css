@@ -44,3 +44,21 @@ button {
   font-size: 1.25rem;
   letter-spacing: 0.15em;
 }
+
+.friends {
+  list-style: none;
+  padding: 0;
+}
+
+.friends li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding-block: 0.25rem;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.friends form {
+  margin: 0;
+}

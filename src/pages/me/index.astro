@@ -1,21 +1,66 @@
 ---
 import Base from "../../layouts/Base.astro";
+import { type FollowResult, friendsOf } from "../../lib/friends";
 import { currentPerson } from "../../lib/people";
 
 const me = currentPerson(Astro.cookies);
+const friends = me ? friendsOf(me) : [];
+
+const FOLLOW_MESSAGES: Record<FollowResult, string> = {
+  added: "Friend added. They're on your overlay now.",
+  unknown: "No timetable has that code. Check it with your friend.",
+  self: "That's your own code.",
+};
+const outcome = Astro.url.searchParams.get("friend") as FollowResult | null;
+const message = outcome ? FOLLOW_MESSAGES[outcome] : undefined;
 ---
 
 <Base title="My timetable">
   <h1>My timetable</h1>
   {
     me ? (
-      <section aria-labelledby="share-heading">
-        <h2 id="share-heading">Your share code</h2>
-        <p>
-          Give this to friends so they can overlay your timetable:{" "}
-          <strong class="share-code">{me.shareCode}</strong>
-        </p>
-      </section>
+      <>
+        <section aria-labelledby="share-heading">
+          <h2 id="share-heading">Your share code</h2>
+          <p>
+            Give this to friends so they can overlay your timetable:{" "}
+            <strong class="share-code">{me.shareCode}</strong>
+          </p>
+        </section>
+
+        <section id="friends" aria-labelledby="friends-heading">
+          <h2 id="friends-heading">Friends</h2>
+          {message && <p role="status">{message}</p>}
+          <form method="post" action="/api/friends">
+            <label for="code">Add a friend by their share code</label>
+            <input
+              id="code"
+              name="code"
+              required
+              maxlength="12"
+              autocomplete="off"
+              autocapitalize="characters"
+              spellcheck="false"
+            />
+            <button>Add friend</button>
+          </form>
+          {friends.length === 0 ? (
+            <p>No friends yet. Ask someone for their code.</p>
+          ) : (
+            <ul class="friends">
+              {friends.map((friend) => (
+                <li>
+                  <span>{friend.name}</span>
+                  <form method="post" action="/api/friends/remove">
+                    <input type="hidden" name="friend" value={friend.id} />
+                    <button aria-label={`Remove ${friend.name}`}>Remove</button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </>
     ) : (
       <p>
         You don't have a timetable on this device yet. <a href="/">Make one</a>
