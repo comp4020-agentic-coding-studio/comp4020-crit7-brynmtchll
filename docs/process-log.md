@@ -174,3 +174,78 @@ existed this week, hence this file.
 
 > there is heaps of time and budget left,
 
+Pushed the day's commits (repo still private). Chose the next round by what
+was wrong or admitted in the README, not by what was easy to add. Deploying
+needs a read of the live database first to size the migration risk: that
+read was refused by the permission system (production reads), so every
+migration below was designed to be safe on any state instead.
+
+## 12. Keep the dates
+
+The export already records the teaching break and Labour Day (no COMP3320
+Monday lecture on 5 Oct), and the parser was throwing that away by reducing
+everything to a weekly shape. A new `occurrences` table keeps each meeting's
+dates. The grid shows a real week with navigation, "right now" says when
+someone's usual classes aren't on, and one-off assessments appear in their
+own week instead of being skipped (reversing entry 7's "skip one-offs").
+[`7a2f9c0`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/7a2f9c0)
+
+Problem found: with a date-dependent grid, the test files began to race.
+They share one server and so one catalogue, and "the newest import sets a
+class's dates" let `overlay.test.ts`'s COMP4020 tute dates overwrite
+`weeks.test.ts`'s. The app is doing what it was designed to. The fixtures
+disagreed about when one real class runs. Fixed with per-file course codes
+and a pinned `?week=` everywhere, since the grid defaults to the real week
+and an unpinned test would have gone red a week after it was written.
+
+## 13. A migration that would have wiped the live data
+
+Before moving tokens off `people`, I hypothesised that dropping the column
+would rebuild the table and cascade-delete picks and follows. On a scratch
+copy the hypothesis was wrong: drizzle-kit uses SQLite's in-place
+`DROP COLUMN`. But a change it can't ALTER (a nullability change) does
+rebuild the table. Its `PRAGMA foreign_keys=OFF` is a no-op inside the
+migrator's transaction, and with `db.ts` turning keys on before migrating,
+picks went 2 → 0 and follows 1 → 0. No migration so far rebuilds a table,
+so nothing was lost. Keys are now off while migrating, checked with
+`foreign_key_check`, then on. A synthetic rebuild in
+`spec/migrations.test.ts` guards it, and was seen failing with the old
+order. [`585e861`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/585e861)
+
+## 14. More than one device
+
+A timetable lived in one cookie: lost with it, and stuck on the laptop the
+export was downloaded on, when "right now" is a phone question. Tokens moved
+to a `sessions` table, with one-time device codes (ten minutes, hashed). The
+migration carries every existing token across by hand-written `INSERT`
+before the column goes. Tested from the `0003` state, and seen failing
+without the step. The claim page only reads, because chat apps fetch pasted
+links for previews and a GET that spent the code would let the preview use
+it. [`2ef9f1b`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/2ef9f1b)
+
+## 15. Control over who sees you
+
+Since a share code is the permission, `/me/` now shows who has added you,
+with Remove. A new code retires the old one, and deleting cascades
+everywhere and drops you off friends' open overlays live. A share link
+carries the code through sign-up. A test here nearly repeated entry 8's
+vacuous pattern (asserting lists were empty without ever seeing them full).
+It now asserts both lists name the person first. [`2d2ca1c`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/2d2ca1c)
+
+## 16. The grid, read by a person
+
+Screenshots, not tests, drove this:
+
+- Blocks truncated to "C…", and details lived in a `title` tooltip that
+  touch and keyboard users never see. Each block is now a button opening a
+  native popover. [`1669c05`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/1669c05)
+- The first cut of narrow-lane labels hid everything below 4.5rem, which at
+  a normal laptop width with three people shown stripped every block. It's
+  now tiered: prefix first, then the kind only in a clash's sub-lane.
+- On a phone the week became one day per screen, starting on today, with
+  day links to show there's more to swipe to. Checked at 390×844.
+  [`14bd608`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/14bd608)
+
+Deployed after reading the new migrations' SQL for `DROP TABLE` (none). All
+CI probes pass live, and the link check is clean.
+
