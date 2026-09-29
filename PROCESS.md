@@ -1,54 +1,42 @@
 # Process overview
 
-<!-- TEMPLATE: this file is a shape to fill in, not a form. Replace everything
-     in it with your own overview, and delete this comment — `pnpm
-     check:evidence` will remind you if it's still here. -->
-
-Written by you, for a reader: how you got from the brief to the harness and
-agentic workflow behind this submission. Markers read this file and follow its
-citations; they don't trawl the repo for evidence you didn't point at.
-
-This file is the shape; the course site's
-[assessment page](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#what-you-submit)
-is the requirement, and its
-[word counts](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/topics/assessment/#word-counts)
-cover every deliverable.
-
 ## What I built
 
-A sentence or two. `README.md` is where the account of what the app is and what
-good means here lives; this file is how you got there.
+A full-stack overlay of friends' ANU timetables, fed by the `.ics` file
+MyTimetable already exports. `README.md` says what it is and what good means
+here.
 
 ## How I got here
 
-The account of the process: how the work actually went, and how you knew the
-result was right. Tell it in whatever order makes it clear. A weekly prototype
-needs a paragraph or two; an assignment needs more.
+I chose timetabling, and the friends overlay over a tute swap board, then
+settled four decisions before any plan: share codes instead of accounts,
+one-way friending, all four overlay views, and a seeded course catalogue. That
+last one didn't survive my real MyTimetable export. The export broke the schema
+(COMP3320 runs LecA and LecB as separate activities, each group 01), and since
+it only holds my own groups, a seeded catalogue could never offer a friend a
+different tute. So I switched to importing the export itself:
+[`7ddbc1e`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/7ddbc1e).
+The same file turned out to encode the teaching break and Labour Day, which the
+parser had been throwing away:
+[`7a2f9c0`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/7a2f9c0).
 
-Cite the record as you go, as links whose text is the commit hash or range and
-whose target is this repo's commit or compare URL, so a reader clicks straight
-to the evidence:
+From there I directed at the level of decisions and had the agent iterate
+("iterate and keep working"), and the corrections came from checking against
+real state rather than trusting green tests. A migration that rebuilds a table
+would have wiped every pick and follow on the live volume, and was caught on a
+scratch copy first:
+[`585e861`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/585e861).
+Shared meeting rows let anyone's import move a class in everyone's week:
+[`34111b8`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/34111b8).
+Each migration test was seen failing before it counted.
 
-- one commit: [`a1b2c3d`](https://github.com/YOUR-ORG/YOUR-REPO/commit/a1b2c3d)
-- a range:
-  [`a1b2c3d...e4f5a6b`](https://github.com/YOUR-ORG/YOUR-REPO/compare/a1b2c3d...e4f5a6b)
+The last stretch went to the interface: a design system, and friends split
+from my own data ([`4ff5824`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/4ff5824),
+[`a38b026`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/a38b026)). Then came a review with harder data than the demo,
+where eight people turned the grid's one-lane-per-person layout into slivers
+and it gave way to calendar-style packing:
+[`36b4091`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/36b4091).
 
-To pair a prompt with the commit it produced, quote the prompt (curated, not a
-full transcript) next to the citation:
-
-> the prompt, verbatim
-
-Screenshots are welcome where one carries the point better than a sentence does.
-Commit the file to this repo and link it with a **relative** path, which is what
-makes it render on GitHub: `![alt text](docs/before.png)`. Images don't count
-towards the word count and don't replace the citation.
-
-## Before you ship
-
-`pnpm check:evidence` verifies that this comment is gone, that your citations
-resolve to real commits, that a crit week's reflection entry is in
-`reflections/`, and that your `CLAUDE.md` is there. It checks that your account
-is traceable, not that it is good: that is the marker's call.
-
-Images aren't checked: unlike a citation whose SHA doesn't resolve, a broken
-image is visible the moment this file is rendered on GitHub.
+The full record, with my prompts verbatim, is `docs/process-log.md`. The rules I
+hold the agent to are in `CLAUDE.md`, carried forward from A2:
+[`f34fcdd`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/f34fcdd).
