@@ -24,6 +24,11 @@ export function activityLabel(activity: string): string {
   return KINDS[activity.slice(0, 3)] ?? activity;
 }
 
+// Allocate+ writes some groups with an underscore ("01_Clone"); read as words.
+export function prettyGroup(group: string): string {
+  return group.replace(/_/g, " ");
+}
+
 // Allocate+ joins a room's parts with underscores ("Rm 4.03_Marie Reay Bldg
 // 155"); people read them with commas.
 export function prettyRoom(room: string): string {
@@ -136,6 +141,7 @@ export function occursOn(s: Slot, date: string): boolean {
 }
 
 export const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"] as const;
+export const DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] as const;
 
 export function clock(minutes: number): string {
   const h = Math.floor(minutes / 60);

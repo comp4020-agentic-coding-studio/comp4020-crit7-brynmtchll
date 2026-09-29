@@ -4,7 +4,7 @@ import QrCode from "../../components/QrCode.astro";
 import Base from "../../layouts/Base.astro";
 import { formatDate } from "../../lib/dates";
 import { NAME_LENGTH, currentPerson, deviceCount, formatLinkCode } from "../../lib/people";
-import { DAYS, activityLabel, clock, isOneOff, prettyRoom, slotsFor } from "../../lib/timetable";
+import { DAYS, activityLabel, clock, isOneOff, prettyGroup, prettyRoom, slotsFor } from "../../lib/timetable";
 
 // Your own data: your classes, where they came from, your name, your
 // devices, and deleting it all. Friends live on /friends/.
@@ -97,7 +97,7 @@ const skipped = Number(params.get("skipped") ?? 0);
                               {clock(s.start)}–{clock(s.end)}
                             </span>
                             <span class="grow">
-                              <strong>{s.courseCode}</strong> {activityLabel(s.activity)} {s.group}
+                              <strong>{s.courseCode}</strong> {activityLabel(s.activity)} {prettyGroup(s.group)}
                               {s.room && <span class="room"> · {prettyRoom(s.room)}</span>}
                             </span>
                           </li>
@@ -113,11 +113,11 @@ const skipped = Number(params.get("skipped") ?? 0);
                 <ul class="rows">
                   {oneOffs.map((s) => (
                     <li>
-                      <span class="when">
+                      <span class="when dated">
                         {formatDate(s.dates[0])} {clock(s.start)}–{clock(s.end)}
                       </span>
                       <span class="grow">
-                        <strong>{s.courseCode}</strong> {activityLabel(s.activity)} {s.group}
+                        <strong>{s.courseCode}</strong> {activityLabel(s.activity)} {prettyGroup(s.group)}
                         {s.room && <span class="room"> · {prettyRoom(s.room)}</span>}
                       </span>
                     </li>
@@ -179,9 +179,9 @@ const skipped = Number(params.get("skipped") ?? 0);
                     <strong>/link</strong> and enter
                   </p>
                   <p class="code">{formatLinkCode(linkCode)}</p>
-                  <div class="copy-field">
-                    <input aria-label="Link for your other device" type="url" value={linkUrl} readonly />
-                    <button type="button" data-copy={linkUrl} hidden>
+                  <p class="link-text" id="device-link">{linkUrl}</p>
+                  <div class="actions">
+                    <button type="button" class="small" data-copy={linkUrl} hidden>
                       Copy link
                     </button>
                   </div>

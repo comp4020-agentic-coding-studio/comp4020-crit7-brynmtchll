@@ -23,7 +23,7 @@ describe("QR codes", () => {
   it("on the Friends page, draw the share link shown beside them", async () => {
     const me = await makeTimetable("Scannable");
     const page = await doc("/friends/", me.cookie);
-    const link = page.querySelector<HTMLInputElement>("#share-link")?.value ?? "";
+    const link = page.querySelector("#share-link")?.textContent?.trim() ?? "";
     expect(link).toContain(`/friends/?add=${me.shareCode}`);
     const qr = page.querySelector('#share svg[role="img"]');
     expect(qr?.getAttribute("aria-label")).toBeTruthy();
@@ -34,7 +34,7 @@ describe("QR codes", () => {
     const me = await makeTimetable("Linking");
     const res = await post("/api/devices/link", new URLSearchParams(), me.cookie);
     const page = await doc(res.headers.get("location") ?? "", me.cookie);
-    const link = page.querySelector<HTMLInputElement>('input[aria-label="Link for your other device"]')?.value ?? "";
+    const link = page.querySelector("#device-link")?.textContent?.trim() ?? "";
     expect(link).toMatch(/\/link\/\?code=[A-Z0-9]{8}$/);
     expect(drawingOf(page.querySelector('#devices svg[role="img"]'))).toBe(expected(link));
   });

@@ -156,9 +156,9 @@ const undone = params.get("undone");
                   Copy code
                 </button>
               </div>
-              <label for="share-link" class="spaced">Or send your link</label>
-              <div class="copy-field">
-                <input id="share-link" type="url" value={shareLink} readonly />
+              <p class="spaced-label">Or send your link:</p>
+              <p class="link-text" id="share-link">{shareLink}</p>
+              <div class="actions">
                 <button type="button" data-copy={shareLink} hidden>
                   Copy link
                 </button>

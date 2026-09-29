@@ -1,12 +1,14 @@
 import { type Moment, addDays } from "./dates";
 import { type Slot, isOneOff, occursOn } from "./timetable";
 
-// Where each class sits on the week grid. Every person shown gets their own
-// lane in each day column, always in the same order, so a gap running
-// across all the lanes reads as time everyone has free. A person's own
-// clashes (Allocate+ happily allocates overlapping lectures) split their
-// lane into sub-lanes rather than drawing one block over another.
-
+// Where each class sits on the week grid. Classes are packed the way a
+// calendar packs events: each group of classes that overlap in time shares
+// the day's width between just the columns it needs, and a class that
+// overlaps nothing takes the whole width. (The first version gave every
+// person a fixed lane, so a gap across all lanes read as free time; at eight
+// people every class was a 24px sliver, and the free-time bands say "free"
+// directly now.) Within a tie, people keep their overlay order, so you're
+// leftmost, and a person's own clashes still sit side by side.
 export type Placed = Slot & { left: number; width: number; top: number; height: number };
 
 export type Grid = {
@@ -22,31 +24,40 @@ export function placeOnGrid(slots: Slot[], people: number[]): Grid {
   const from = Math.min(8 * HOUR, ...slots.map((s) => Math.floor(s.start / HOUR) * HOUR));
   const to = Math.max(18 * HOUR, ...slots.map((s) => Math.ceil(s.end / HOUR) * HOUR));
   const span = to - from;
-  const lane = 100 / Math.max(people.length, 1);
+  const order = (s: Slot) => people.indexOf(s.personId);
 
   const days: Placed[][] = [[], [], [], [], []];
   for (let day = 1; day <= 5; day++) {
-    for (const [index, personId] of people.entries()) {
-      const mine = slots
-        .filter((s) => s.day === day && s.personId === personId)
-        .sort((a, b) => a.start - b.start || a.end - b.end);
+    const today = slots
+      .filter((s) => s.day === day && people.includes(s.personId))
+      .sort((a, b) => a.start - b.start || order(a) - order(b) || a.end - b.end);
 
-      // Greedy interval partitioning: each block takes the first sub-lane
+    // Split the day into clusters: runs of classes linked by overlap. A new
+    // cluster starts when a class begins after everything before it ended.
+    const clusters: Slot[][] = [];
+    let clusterEnd = -1;
+    for (const s of today) {
+      if (s.start >= clusterEnd) clusters.push([]);
+      clusters[clusters.length - 1].push(s);
+      clusterEnd = Math.max(clusterEnd, s.end);
+    }
+
+    for (const cluster of clusters) {
+      // Greedy interval partitioning: each class takes the first column
       // that's free by its start time.
-      const subLaneEnds: number[] = [];
-      const subLane = mine.map((s) => {
-        let i = subLaneEnds.findIndex((end) => end <= s.start);
-        if (i < 0) i = subLaneEnds.push(0) - 1;
-        subLaneEnds[i] = s.end;
+      const columnEnds: number[] = [];
+      const column = cluster.map((s) => {
+        let i = columnEnds.findIndex((end) => end <= s.start);
+        if (i < 0) i = columnEnds.push(0) - 1;
+        columnEnds[i] = s.end;
         return i;
       });
-      const subWidth = lane / Math.max(subLaneEnds.length, 1);
-
-      mine.forEach((s, i) => {
+      const width = 100 / columnEnds.length;
+      cluster.forEach((s, i) => {
         days[day - 1].push({
           ...s,
-          left: index * lane + subLane[i] * subWidth,
-          width: subWidth,
+          left: column[i] * width,
+          width,
           top: ((s.start - from) / span) * 100,
           height: ((s.end - s.start) / span) * 100,
         });

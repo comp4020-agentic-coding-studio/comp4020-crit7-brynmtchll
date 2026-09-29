@@ -13,7 +13,7 @@ import {
   statusAt,
 } from "../../lib/overlay";
 import { currentPerson, deviceCount } from "../../lib/people";
-import { DAYS, activityLabel, clock, prettyRoom, slotsFor } from "../../lib/timetable";
+import { DAYS, DAY_NAMES, activityLabel, clock, prettyGroup, prettyRoom, slotsFor } from "../../lib/timetable";
 
 const me = currentPerson(Astro.cookies);
 const everyone = me ? [me, ...friendsOf(me)] : [];
@@ -90,6 +90,27 @@ const steps = me
 const stepsDone = steps.filter((s) => s.done).length;
 const showWelcome = steps.length > 0 && stepsDone < steps.length && Astro.cookies.get("welcome")?.value !== "hidden";
 
+// Right now, compacted: a row each for whoever's in class or free (that's
+// what you'd act on), and one line each for everyone done, off or without
+// classes today, instead of a card of "No classes today" rows.
+const statuses = me && isWeekday ? shown.map((p) => ({ id: p.id, status: statusAt(slots, p.id, now) })) : [];
+const active = statuses.filter(({ status }) => status.state === "in-class" || status.state === "free");
+const idsIn = (state: Status["state"]) => statuses.filter(({ status }) => status.state === state).map(({ id }) => id);
+const sentence = (ids: number[], singular: string, plural: string): string => {
+  const names = list(ids);
+  const verb = ids.length === 1 && ids[0] !== me?.id ? singular : plural;
+  return `${names.charAt(0).toUpperCase()}${names.slice(1)} ${verb}`;
+};
+const quiet = [
+  { ids: idsIn("done"), text: (ids: number[]) => `${sentence(ids, "is", "are")} done for today.` },
+  {
+    ids: idsIn("off"),
+    text: (ids: number[]) =>
+      `${sentence(ids, "has", "have")} no classes today: the usual ${DAY_NAMES[now.day - 1]} ones aren't on, so it's a public holiday or the teaching break.`,
+  },
+  { ids: idsIn("none"), text: (ids: number[]) => `${sentence(ids, "has", "have")} no classes on ${DAY_NAMES[now.day - 1]}s.` },
+].filter((group) => group.ids.length > 0);
+
 const where = (s: { courseCode: string; activity: string; room: string | null }): string =>
   `${s.courseCode} ${activityLabel(s.activity)}${s.room ? ` · ${prettyRoom(s.room)}` : ""}`;
 const describe = (status: Status): { chip: string; tone: string; detail: string } => {
@@ -112,7 +133,7 @@ const describe = (status: Status): { chip: string; tone: string; detail: string 
       return {
         chip: "No classes today",
         tone: "",
-        detail: `The usual ${DAYS[now.day - 1]} classes aren't on: a public holiday or the teaching break.`,
+        detail: `The usual ${DAY_NAMES[now.day - 1]} classes aren't on: a public holiday or the teaching break.`,
       };
     default:
       return { chip: "No classes today", tone: "", detail: "" };
@@ -199,7 +220,7 @@ const describe = (status: Status): { chip: string; tone: string; detail: string 
           <fieldset>
             <legend>Showing</legend>
             {everyone.map((p) => (
-              <label class:list={["chip", colourOf.get(p.id)]}>
+              <label class:list={["chip", colourOf.get(p.id)]} title={nameOf.get(p.id)}>
                 <input type="checkbox" name="show" value={p.id} checked={shownIds.includes(p.id)} />
                 <span class="dot" aria-hidden="true" />
                 <span class="chip-name">{nameOf.get(p.id)}</span>
@@ -226,28 +247,38 @@ const describe = (status: Status): { chip: string; tone: string; detail: string 
             {!isWeekday ? (
               <p>It's the weekend. Nobody has class.</p>
             ) : (
-              <ul class="rows now-list">
-                {shown.map((p) => {
-                  const d = describe(statusAt(slots, p.id, now));
-                  return (
-                    <li class={colourOf.get(p.id)}>
-                      <span class="avatar" aria-hidden="true">
-                        {initial(p.id)}
-                      </span>
-                      <span class="grow">
-                        <strong>{nameOf.get(p.id)}</strong>{" "}
-                        <span class:list={["status", d.tone]}>{d.chip}</span>
-                        {d.detail && <span class="detail">{d.detail}</span>}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+              <>
+                {active.length > 0 && (
+                  <ul class="rows now-list">
+                    {active.map(({ id, status }) => {
+                      const d = describe(status);
+                      return (
+                        <li class={colourOf.get(id)}>
+                          <span class="avatar" aria-hidden="true">
+                            {initial(id)}
+                          </span>
+                          <span class="grow">
+                            <strong>{nameOf.get(id)}</strong>{" "}
+                            <span class:list={["status", d.tone]}>{d.chip}</span>
+                            <span class="detail">{d.detail}</span>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+                {quiet.map((group) => (
+                  <p class="now-quiet">{group.text(group.ids)}</p>
+                ))}
+              </>
             )}
           </section>
         )}
 
-        <section id="grid" class="card week-card" aria-label={`The week of ${formatDate(monday)}`}>
+        <section id="grid" class="card week-card" aria-labelledby="grid-heading">
+          <h2 id="grid-heading" class="visually-hidden">
+            Classes in the week of {formatDate(monday)}
+          </h2>
           {!shownHaveClasses ? (
             <div class="empty">
               {iHaveClasses || shownIds.length === 0 ? (
@@ -349,7 +380,7 @@ const describe = (status: Status): { chip: string; tone: string; detail: string 
                                 <strong>{b.courseCode}</strong> {b.courseTitle}
                               </p>
                               <p>
-                                {activityLabel(b.activity)} {b.group} ({b.activity})
+                                {activityLabel(b.activity)} {prettyGroup(b.group)} ({b.activity})
                               </p>
                               <p>
                                 {formatDate(addDays(monday, b.day - 1))}, {clock(b.start)}–{clock(b.end)}
@@ -395,7 +426,9 @@ const describe = (status: Status): { chip: string; tone: string; detail: string 
             ) : (
               <>
                 <p class="fine">
-                  When {list(shownIds)} {shownIds.length === 2 ? "are both" : "are all"} out of class,{" "}
+                  {shownIds.length > 3
+                    ? `When all ${shownIds.length} people shown are out of class`
+                    : `When ${list(shownIds)} ${shownIds.length === 2 ? "are both" : "are all"} out of class`},{" "}
                   {clock(FREE_WINDOW.start)}–{clock(FREE_WINDOW.end)}.
                 </p>
                 <ul class="free-list">
@@ -427,12 +460,15 @@ const describe = (status: Status): { chip: string; tone: string; detail: string 
             {shownIds.length < 2 ? (
               <p class="muted">Show a friend above to see which classes you share.</p>
             ) : shared.length === 0 ? (
-              <p class="muted">You don't share any classes with {list(shownIds.filter((id) => id !== me.id))}.</p>
+              <p class="muted">
+                You don't share any classes with{" "}
+                {shownIds.length > 3 ? "anyone shown" : list(shownIds.filter((id) => id !== me.id))}.
+              </p>
             ) : (
               <ul class="shared-list">
                 {shared.map((c) => (
                   <li>
-                    <strong>{c.courseCode}</strong> {activityLabel(c.activity)} {c.group},{" "}
+                    <strong>{c.courseCode}</strong> {activityLabel(c.activity)} {prettyGroup(c.group)},{" "}
                     {c.meetings
                       .map((m) =>
                         m.dates.length === 1
