@@ -8,6 +8,6 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   if (!me) return redirect("/", 303);
   const form = await request.formData();
   const friendId = Number(form.get("friend"));
-  if (Number.isInteger(friendId)) unfollow(me, friendId);
-  return redirect("/friends/#friends", 303);
+  const removed = Number.isInteger(friendId) && unfollow(me, friendId);
+  return redirect(removed ? "/friends/?removed=friend#friends" : "/friends/#friends", 303);
 };

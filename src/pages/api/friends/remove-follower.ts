@@ -10,10 +10,8 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   if (!me) return redirect("/", 303);
   const form = await request.formData();
   const followerId = Number(form.get("follower"));
-  if (Number.isInteger(followerId)) {
-    removeFollower(me, followerId);
-    // their open overlay reloads, and you're gone from it
-    announce({ personId: me.id });
-  }
-  return redirect("/friends/?follower=removed#visible", 303);
+  const removed = Number.isInteger(followerId) && removeFollower(me, followerId);
+  // their open overlay reloads, and you're gone from it
+  if (removed) announce({ personId: me.id });
+  return redirect(removed ? "/friends/?removed=follower#visible" : "/friends/#visible", 303);
 };

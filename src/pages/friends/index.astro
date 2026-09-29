@@ -1,7 +1,7 @@
 ---
 import QrCode from "../../components/QrCode.astro";
 import Base from "../../layouts/Base.astro";
-import { type FollowResult, followersOf, friendsOf } from "../../lib/friends";
+import { type FollowResult, followersOf, friendsOf, recentRemoval } from "../../lib/friends";
 import { LIMITED, clientOf, guardedLookup } from "../../lib/limits";
 import { personClass } from "../../lib/overlay";
 import { currentPerson, normaliseShareCode, personByShareCode } from "../../lib/people";
@@ -41,6 +41,12 @@ const FOLLOW_ERRORS: Partial<Record<FollowResult, string>> = {
   limited: TOO_MANY,
 };
 const followError = outcome ? FOLLOW_ERRORS[outcome] : undefined;
+
+// Just removed someone: say who, and offer to put them back.
+const removedKind = params.get("removed");
+const removal = me && removedKind ? recentRemoval(me) : undefined;
+const justRemoved = removal && removal.kind === removedKind ? removal : undefined;
+const undone = params.get("undone");
 ---
 
 <Base title="Friends">
@@ -107,6 +113,29 @@ const followError = outcome ? FOLLOW_ERRORS[outcome] : undefined;
         {followError && (
           <p class="notice error" role="alert">
             {followError}
+          </p>
+        )}
+
+        {justRemoved && (
+          <div class="notice" role="status">
+            <p>
+              {justRemoved.kind === "friend"
+                ? `Removed ${justRemoved.other.name} from your week.`
+                : `${justRemoved.other.name} can't see your week any more. They'd need your code to add you back.`}
+            </p>
+            <form method="post" action="/api/friends/undo" class="actions">
+              <button class="small">Undo</button>
+            </form>
+          </div>
+        )}
+        {(undone === "friend" || undone === "follower") && (
+          <p class="notice success" role="status">
+            Undone: {undone === "friend" ? "they're back on your week." : "they can see your week again."}
+          </p>
+        )}
+        {undone === "expired" && (
+          <p class="notice error" role="alert">
+            That can't be undone any more. Undo lasts five minutes.
           </p>
         )}
 
@@ -221,11 +250,6 @@ const followError = outcome ? FOLLOW_ERRORS[outcome] : undefined;
 
         <section id="visible" class="card" aria-labelledby="visible-heading">
           <h2 id="visible-heading">Who can see you</h2>
-          {params.get("follower") === "removed" && (
-            <p class="notice success" role="status">
-              Removed. They'd need your code again to add you back.
-            </p>
-          )}
           {followers.length === 0 ? (
             <div class="empty">
               <p>Nobody has added your code yet.</p>
