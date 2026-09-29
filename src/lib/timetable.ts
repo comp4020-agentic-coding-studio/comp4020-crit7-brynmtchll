@@ -24,14 +24,15 @@ export function activityLabel(activity: string): string {
   return KINDS[activity.slice(0, 3)] ?? activity;
 }
 
-// An import is the whole timetable: the person's picks are replaced, not
-// merged, so re-importing after a MyTimetable change is how you update. The
-// catalogue rows are shared, so a class someone else imported first is
-// reused (that shared row is what makes a shared class), and its meetings
-// are refreshed from the newest export, which is the best information
-// anyone has about when it meets.
+// An import is the whole timetable: the person's picks and meetings are
+// replaced, not merged, so re-importing after a MyTimetable change is how
+// you update. Classes are shared, so a class someone else imported first is
+// reused (that shared row is what makes a shared class); the meetings are
+// this person's own, so no import can move anyone else's week.
 export function importTimetable(me: Person, parsed: ParsedTimetable): void {
   db.transaction((tx) => {
+    // occurrences go with their meetings (on delete cascade)
+    tx.delete(meetings).where(eq(meetings.personId, me.id)).run();
     tx.delete(picks).where(eq(picks.personId, me.id)).run();
     for (const c of parsed.classes) {
       tx.insert(courses)
@@ -54,11 +55,9 @@ export function importTimetable(me: Person, parsed: ParsedTimetable): void {
         )
         .get();
       if (!row) throw new Error(`class ${c.courseCode} ${c.activity} ${c.group} vanished`);
-      // occurrences go with their meetings (on delete cascade)
-      tx.delete(meetings).where(eq(meetings.classId, row.id)).run();
       const inserted = tx
         .insert(meetings)
-        .values(c.meetings.map(({ dates, ...m }) => ({ ...m, classId: row.id })))
+        .values(c.meetings.map(({ dates, ...m }) => ({ ...m, classId: row.id, personId: me.id })))
         .returning({ id: meetings.id })
         .all();
       const dated = c.meetings.flatMap((m, i) =>
@@ -108,7 +107,8 @@ export function slotsFor(personIds: number[]): Slot[] {
     .from(picks)
     .innerJoin(classes, eq(classes.id, picks.classId))
     .innerJoin(courses, eq(courses.code, classes.courseCode))
-    .innerJoin(meetings, eq(meetings.classId, classes.id))
+    // their own meetings of the class, as their export has it
+    .innerJoin(meetings, and(eq(meetings.classId, classes.id), eq(meetings.personId, picks.personId)))
     .leftJoin(occurrences, eq(occurrences.meetingId, meetings.id))
     .where(inArray(picks.personId, personIds))
     .groupBy(picks.personId, meetings.id)

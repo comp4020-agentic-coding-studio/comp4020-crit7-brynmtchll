@@ -44,11 +44,17 @@ export const classes = sqliteTable(
   (t) => [uniqueIndex("classes_course_activity_group").on(t.courseCode, t.activity, t.group)],
 );
 
-// When a class meets. Its own table because one group can meet more than
-// once a week, and because Allocate+ splits some groups into parts (a lab
-// "02-P1" 13:00–14:30 then its drop-in "02-P2" 14:30–15:00), which are two
-// meetings of one class. Times are minutes after midnight, Canberra time, so
-// overlap and free-time arithmetic is integer comparison rather than string
+// When a class meets, as one person's export says. Meetings belong to the
+// person whose import they came from, not to the shared class: if they were
+// shared, anyone could import a crafted file and move a real tute for
+// everyone who's in it. Class identity stays shared (that's what makes a
+// shared class); each person's view of its times is their own.
+//
+// Its own table because one group can meet more than once a week, and
+// because Allocate+ splits some groups into parts (a lab "02-P1"
+// 13:00–14:30 then its drop-in "02-P2" 14:30–15:00), which are two meetings
+// of one class. Times are minutes after midnight, Canberra time, so overlap
+// and free-time arithmetic is integer comparison rather than string
 // parsing. A null room is a class with no room (Allocate+ says "NA").
 export const meetings = sqliteTable(
   "meetings",
@@ -57,14 +63,16 @@ export const meetings = sqliteTable(
     classId: int("class_id")
       .notNull()
       .references(() => classes.id, { onDelete: "cascade" }),
+    personId: int("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
     day: int().notNull(), // 1 = Monday … 5 = Friday
     start: int().notNull(),
     end: int().notNull(),
     room: text(),
   },
   (t) => [
-    // re-importing a class someone else already brought in is a no-op
-    uniqueIndex("meetings_class_slot").on(t.classId, t.day, t.start, t.end),
+    uniqueIndex("meetings_person_class_slot").on(t.personId, t.classId, t.day, t.start, t.end),
     check("meetings_weekday", sql`${t.day} between 1 and 5`),
     check("meetings_ordered", sql`${t.start} >= 0 and ${t.start} < ${t.end} and ${t.end} <= 1440`),
   ],

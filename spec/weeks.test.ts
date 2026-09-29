@@ -6,12 +6,12 @@ import { type Visitor, importCalendar, makeTimetable, page } from "./http";
 // export leaves out of a week (Labour Day, the teaching break) isn't drawn
 // in that week, and a one-off session appears only in its own.
 
-// Course codes of its own: the catalogue is shared across the whole test
-// server, and the newest import of a class sets its dates for everyone, so
-// reusing another file's COMP4020 TutA 04 with different dates would make
-// this file's result depend on which ran last.
-const HPC = { course: "WEEK3320", title: "HPC" };
-const STUDIO = { course: "WEEK4020", title: "Agentic Coding Studio" };
+// The same COMP4020 TutA 04 other test files import, with different dates
+// on purpose: each person's meetings are their own, so another file's
+// import of the class can't change this timetable (it used to, when
+// meetings were shared rows).
+const HPC = { course: "COMP3320", title: "HPC" };
+const STUDIO = { course: "COMP4020", title: "Agentic Coding Studio" };
 
 let me: Visitor;
 
@@ -38,13 +38,13 @@ async function grid(week: string): Promise<string> {
 describe("the week grid", () => {
   it("draws a week's classes", async () => {
     const week = await grid("2026-09-28");
-    expect(week).toContain("WEEK3320");
-    expect(week).toContain("WEEK4020");
+    expect(week).toContain("COMP3320");
+    expect(week).toContain("COMP4020");
   });
 
   it("leaves out a class the export skips that week", async () => {
     const labourDay = await grid("2026-10-05");
-    expect(labourDay).toContain("WEEK4020");
+    expect(labourDay).toContain("COMP4020");
     expect(labourDay).not.toContain("Lecture");
   });
 

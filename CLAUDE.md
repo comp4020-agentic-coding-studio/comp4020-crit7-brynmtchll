@@ -55,6 +55,11 @@ first schema wrong, so hold these:
   now" go by `occurrences`, never by the weekly shape alone. A meeting with no
   dates predates the table and is read as weekly.
 
+**Classes are shared; meetings are not.** A class row (course, activity,
+group) is shared, and that's what "you share a class" means. Its meetings
+and dates belong to the person whose export they came from. Never let one
+person's import write rows another person's view reads.
+
 **Never commit a personal export.** The repo goes public at the cutoff.
 Fixtures use COMP4020's classes (every student in the course has them) or
 synthetic courses built with `spec/fixtures/mytimetable.ts`.
@@ -242,8 +247,9 @@ rest, so a broken build hides every spec result behind it.
     shows one-offs only in their own week
   - `live`: an import is announced on the stream, and only by id
   - `signed-in-a11y`: the axe floor on `/me/` and `/overlay/` with data on them
-  - `migrations`: child rows survive a migration that recreates their parent,
-    and existing cookies survive the move to `sessions`
+  - `migrations`: from each previous state with data in it, child rows
+    survive a table rebuild, cookies survive the move to `sessions`, and
+    shared meetings fan out to per-person copies
   - `devices`: a one-time code opens a timetable on a second device, and
     each device signs out alone
   - `privacy`: who can see you and removing them, a new code retiring the
@@ -292,11 +298,17 @@ accessibility. Nothing measures performance.
   403s in production.
 - **Add every new page to `spec/routes.ts`**, or the invariants silently stop
   covering it. If it matters signed in, add it to `signed-in-a11y` too.
-- **Tests share one server, so they share the catalogue.** The newest import
-  of a class sets its dates for everyone, so two test files importing the same
-  class with different dates race. Give a test file its own course codes when
-  its dates differ, and pin `?week=` on any overlay request, since the grid
-  defaults to the real current week.
+- **Pin `?week=` on any overlay request in a test.** The grid defaults to
+  the real current week, and fixture dates are fixed, so an unpinned test
+  passes the day it's written and fails a week later. (Test files share one
+  server and so the class catalogue; that's fine now meetings are
+  per-person, and `weeks.test.ts` imports another file's class with
+  different dates on purpose to prove it.)
+- **drizzle-kit's SQL can pass on an empty table and fail on the live
+  volume.** For `meetings.person_id` it generated `ADD ... NOT NULL` with no
+  default, which works on a fresh database and is refused on one with rows.
+  Every migration gets a test in `spec/migrations.test.ts` that starts from
+  the previous migration's state *with data in it*.
 - **There's no base path.** The app is served from the root of its `fly.dev`
   host, so root-absolute links (`href="/me/"`) are correct here. This inverts
   A2's rule, where the platform derived `base` and a root-absolute link

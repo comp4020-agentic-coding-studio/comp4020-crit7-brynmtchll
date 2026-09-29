@@ -98,3 +98,19 @@ describe("free together", () => {
     expect(free.Tue).toBe("09:00–17:00");
   });
 });
+
+describe("someone else's import", () => {
+  it("can't move a class in a friend's week, even the same class", async () => {
+    // a stranger claims our COMP4020 TutA 04 meets on Friday at 07:00
+    const stranger = await makeTimetable("Stranger");
+    const moved = weekly(
+      { ...COMP4020, activity: "TutA", group: "04", start: "0700", end: "0800" },
+      WEEKS.fri,
+    );
+    await importCalendar(stranger, myTimetable(moved));
+
+    const week = (await page(OVERLAY, me.cookie)).split('id="week-heading"')[1]?.split('id="free-heading"')[0] ?? "";
+    expect(week).toContain("10:30–12:00"); // our tute, where our exports put it
+    expect(week).not.toContain("07:00–08:00");
+  });
+});
