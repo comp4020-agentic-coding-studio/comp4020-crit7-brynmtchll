@@ -1,7 +1,15 @@
 ---
 import Base from "../../layouts/Base.astro";
 import { friendsOf } from "../../lib/friends";
-import { COLOURS, FREE_WINDOW, freeTogether, placeOnGrid, sharedWith } from "../../lib/overlay";
+import {
+  COLOURS,
+  FREE_WINDOW,
+  canberraNow,
+  freeTogether,
+  placeOnGrid,
+  sharedWith,
+  statusAt,
+} from "../../lib/overlay";
 import { currentPerson } from "../../lib/people";
 import { DAYS, activityLabel, clock, slotsFor } from "../../lib/timetable";
 
@@ -29,6 +37,11 @@ const shared = me ? sharedWith(slots, me.id, shownIds) : [];
 const free = shownIds.length >= 2 ? freeTogether(slots, shownIds) : [];
 const freeByDay = DAYS.map((_, i) => free.filter((g) => g.day === i + 1));
 const pct = (minutes: number): number => ((minutes - grid.from) / (grid.to - grid.from)) * 100;
+const now = canberraNow();
+const isWeekday = now.day <= 5;
+const nowLine = isWeekday && now.minutes >= grid.from && now.minutes <= grid.to ? pct(now.minutes) : undefined;
+const where = (s: { courseCode: string; activity: string; room: string | null }): string =>
+  `${s.courseCode} ${activityLabel(s.activity)}${s.room ? ` (${s.room})` : ""}`;
 const sharedIds = new Set(shared.map((c) => c.classId));
 const list = (ids: number[]): string => {
   // mid-sentence, so "you" rather than the legend's "You"
@@ -70,6 +83,38 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
           </p>
         )}
 
+        <section aria-labelledby="now-heading">
+          <h2 id="now-heading">
+            Right now <span class="muted">· {isWeekday ? DAYS[now.day - 1] : "Weekend"} {clock(now.minutes)} in Canberra</span>
+          </h2>
+          {!isWeekday ? (
+            <p>It's the weekend. Nobody has class.</p>
+          ) : (
+            <ul class="now-list">
+              {shown.map((p) => {
+                const status = statusAt(slots, p.id, now);
+                const who = nameOf.get(p.id);
+                const verb = p.id === me.id ? "are" : "is";
+                return (
+                  <li style={`--edge: ${colour.get(p.id)?.edge}`}>
+                    <strong>{who}</strong>{" "}
+                    {status.state === "in-class"
+                      ? `${verb} in ${where(status.slot)} until ${clock(status.slot.end)}`
+                      : status.state === "free"
+                        ? `${verb} free until ${clock(status.next.start)}, then ${where(status.next)}`
+                        : status.state === "done"
+                          ? `${p.id === me.id ? "are" : "is"} done for the day`
+                          : `${p.id === me.id ? "have" : "has"} no classes today`}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <p class="muted small">
+            Going by the weekly timetable, so teaching breaks and public holidays look like normal weeks.
+          </p>
+        </section>
+
         <section aria-labelledby="week-heading" class="week-wrap">
           <h2 id="week-heading">This week</h2>
           <div
@@ -87,6 +132,9 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
               <section class="day" aria-labelledby={`day-${i}`}>
                 <h3 id={`day-${i}`}>{DAYS[i]}</h3>
                 <div class="day-body">
+                  {nowLine !== undefined && i === now.day - 1 && (
+                    <div class="now" aria-hidden="true" style={`top: ${nowLine}%`} />
+                  )}
                   {freeByDay[i].map((g) => (
                     <div
                       class="free"

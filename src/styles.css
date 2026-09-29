@@ -255,3 +255,38 @@ nav {
 .free-list {
   padding-inline-start: 1.2rem;
 }
+
+.small {
+  font-size: 0.85rem;
+}
+
+.now-list {
+  list-style: none;
+  padding: 0;
+}
+
+.now-list li {
+  padding-left: 0.6rem;
+  border-left: 4px solid var(--edge);
+  margin-block: 0.3rem;
+}
+
+/* the time now, across today's column, above the classes */
+.now {
+  position: absolute;
+  left: -4px;
+  right: 0;
+  z-index: 2;
+  border-top: 2px solid #d12b2b;
+}
+
+.now::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d12b2b;
+}

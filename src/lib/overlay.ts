@@ -132,3 +132,43 @@ export function freeTogether(slots: Slot[], people: number[]): Gap[] {
   }
   return gaps;
 }
+
+export type Moment = { day: number; minutes: number }; // day 1 = Monday … 7 = Sunday
+
+// The clock the app runs on is the campus's, not the server's (Fly runs in
+// UTC): "now" is always Canberra time.
+export function canberraNow(at: Date = new Date()): Moment {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-AU", {
+      timeZone: "Australia/Canberra",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(at)
+      .map((p) => [p.type, p.value]),
+  );
+  const day = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(parts.weekday) + 1;
+  return { day, minutes: Number(parts.hour) * 60 + Number(parts.minute) };
+}
+
+export type Status =
+  | { state: "in-class"; slot: Slot }
+  | { state: "free"; next: Slot }
+  | { state: "done" } // had classes today, all finished
+  | { state: "none" }; // no classes today
+
+// Where one person is at a moment in the weekly timetable. It knows the
+// week's shape, not the calendar, so teaching breaks and public holidays
+// still read as a normal week.
+export function statusAt(slots: Slot[], personId: number, now: Moment): Status {
+  const today = slots
+    .filter((s) => s.personId === personId && s.day === now.day)
+    .sort((a, b) => a.start - b.start);
+  if (today.length === 0) return { state: "none" };
+  const current = today.find((s) => s.start <= now.minutes && now.minutes < s.end);
+  if (current) return { state: "in-class", slot: current };
+  const next = today.find((s) => s.start > now.minutes);
+  return next ? { state: "free", next } : { state: "done" };
+}
