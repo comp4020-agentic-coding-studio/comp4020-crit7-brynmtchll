@@ -1,0 +1,65 @@
+---
+import Base from "../../layouts/Base.astro";
+import { currentPerson, formatLinkCode, normaliseShareCode, peekDeviceLink } from "../../lib/people";
+
+// Opening a timetable on a second device. Reading this page changes nothing;
+// the code is only spent by the button, so a chat app previewing the link
+// can't use it up.
+const code = normaliseShareCode(Astro.url.searchParams.get("code") ?? "");
+const owner = code ? peekDeviceLink(code) : undefined;
+const here = currentPerson(Astro.cookies);
+const failed = Astro.url.searchParams.has("failed");
+---
+
+<Base title="Link this device">
+  <h1>Link this device</h1>
+  {
+    failed && (
+      <p role="alert">
+        That code didn't work. Codes work once, for ten minutes. Make a new one on your other
+        device.
+      </p>
+    )
+  }
+  {
+    owner ? (
+      <>
+        <p>
+          This opens <strong>{owner.name}</strong>'s timetable on this device.
+        </p>
+        {here && here.id !== owner.id && (
+          <p>
+            This device has {here.name}'s timetable at the moment. Linking switches it; {here.name}'s
+            timetable stays on any other device it's linked to.
+          </p>
+        )}
+        <form method="post" action="/api/devices/claim">
+          <input type="hidden" name="code" value={code} />
+          <button>Open {owner.name}'s timetable here</button>
+        </form>
+      </>
+    ) : (
+      <>
+        {code && !failed && <p role="alert">That code has expired or been used.</p>}
+        <p>
+          On a device that has your timetable, go to <a href="/me/#devices">My timetable</a> and
+          choose "Link another device". Then enter the code here.
+        </p>
+        <form method="get">
+          <label for="code">Code</label>
+          <input
+            id="code"
+            name="code"
+            required
+            maxlength="12"
+            autocomplete="one-time-code"
+            autocapitalize="characters"
+            spellcheck="false"
+            placeholder={formatLinkCode("ABCD2345")}
+          />
+          <button>Continue</button>
+        </form>
+      </>
+    )
+  }
+</Base>

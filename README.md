@@ -33,7 +33,10 @@ a session with a single date, and appears in the week it happens.
 **No accounts.** A timetable is a name and a secret cookie. Friends are added
 by a six-character share code, and knowing someone's code is permission to
 overlay them. Codes leave out 0/O and 1/I/L because they get read aloud
-across a room.
+across a room. The export is easiest to download on a laptop, but "who's in
+class right now" is a phone question, so a timetable can be linked to more
+devices. A one-time code, made on a device that has the timetable, works
+once, within ten minutes, and each device can be signed out on its own.
 
 **What's checked and what's judgement.** `spec/` checks the parts that can be
 checked:
@@ -48,7 +51,8 @@ checked:
 Whether the grid is actually readable, and whether this beats a group chat,
 is for a person to judge.
 
-**What it doesn't do.** Lose your cookie and you lose your timetable. There's
-no way to delete one. The catalogue trusts
+**What it doesn't do.** Lose the cookie on every device a timetable is linked
+to, and the timetable is gone, since there's nothing else to prove it's yours.
+There's no way to delete one. The catalogue trusts
 imports: the newest export of a class decides when that class meets for
 everyone who holds it. Course codes are assumed to mean this semester.

@@ -11,12 +11,14 @@ import { openDatabase } from "../src/lib/open-db";
 
 type Journal = { entries: { idx: number; version: string; when: number; tag: string; breakpoints: boolean }[] };
 
-// A scratch copy of the real migrations, plus any extra ones appended.
-function migrationsWith(extra: { tag: string; sql: string }[] = []): string {
+// A scratch copy of the real migrations, optionally stopping after one of
+// them (to set up state as an older deploy left it), plus any extra ones.
+function migrationsWith(extra: { tag: string; sql: string }[] = [], upTo?: string): string {
   const dir = mkdtempSync(join(tmpdir(), "migrations-"));
   cpSync("./drizzle", dir, { recursive: true });
   const journalPath = join(dir, "meta", "_journal.json");
   const journal: Journal = JSON.parse(readFileSync(journalPath, "utf8"));
+  if (upTo) journal.entries = journal.entries.slice(0, journal.entries.findIndex((e) => e.tag === upTo) + 1);
   for (const { tag, sql } of extra) {
     const last = journal.entries.at(-1);
     if (!last) throw new Error("empty journal");
@@ -64,6 +66,20 @@ describe("migrating the live database", () => {
     expect(count("meetings")).toBe(1);
     expect(count("occurrences")).toBe(2); // cascaded away if keys were on
     expect(after.client.pragma("foreign_keys", { simple: true })).toBe(1); // and back on afterwards
+    after.client.close();
+  });
+
+  it("carries each device's token into sessions, so a deploy signs nobody out", () => {
+    const path = join(mkdtempSync(join(tmpdir(), "db-")), "app.db");
+    // the volume as the first deploys left it: the token hash on people
+    const before = openDatabase(path, migrationsWith([], "0003_dated_occurrences"));
+    before.client.exec(`insert into people (name, share_code, token_hash) values ('Early', 'EARLY2', 'hash-of-early')`);
+    before.client.close();
+
+    const after = openDatabase(path, migrationsWith());
+    expect(after.client.prepare("select token_hash, person_id from sessions").all()).toEqual([
+      { token_hash: "hash-of-early", person_id: 1 },
+    ]);
     after.client.close();
   });
 });

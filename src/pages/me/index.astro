@@ -1,7 +1,7 @@
 ---
 import Base from "../../layouts/Base.astro";
 import { type FollowResult, friendsOf } from "../../lib/friends";
-import { currentPerson } from "../../lib/people";
+import { currentPerson, deviceCount, formatLinkCode } from "../../lib/people";
 import { formatDate } from "../../lib/dates";
 import { DAYS, activityLabel, clock, isOneOff, slotsFor } from "../../lib/timetable";
 
@@ -14,6 +14,9 @@ const oneOffs = slots
   .sort((a, b) => a.dates[0].localeCompare(b.dates[0]) || a.start - b.start);
 
 const params = Astro.url.searchParams;
+const devices = me ? deviceCount(me) : 0;
+const linkCode = params.get("link");
+const linkUrl = linkCode ? new URL(`/link/?code=${linkCode}`, Astro.url).href : undefined;
 
 const FOLLOW_MESSAGES: Record<FollowResult, string> = {
   added: "Friend added. They're on your overlay now.",
@@ -109,6 +112,48 @@ const importMessage = (() => {
               placeholder="BEGIN:VCALENDAR"></textarea>
             <button>Import</button>
           </form>
+        </section>
+
+        <section id="devices" aria-labelledby="devices-heading">
+          <h2 id="devices-heading">Your devices</h2>
+          <p>
+            {devices === 1
+              ? "Your timetable is only on this device. Link another (your phone, say) so you can check it on the go, and so losing this one doesn't lose it."
+              : `Your timetable is on ${devices} devices.`}
+          </p>
+          {params.get("devices") === "signed-out" && (
+            <p role="status">Signed out everywhere else. Only this device has your timetable now.</p>
+          )}
+          {linkCode && linkUrl ? (
+            <div class="link-code" role="status">
+              <p>
+                On your other device, open <a href={linkUrl}>{linkUrl}</a>, or go to{" "}
+                <strong>/link</strong> and enter <strong class="share-code">{formatLinkCode(linkCode)}</strong>.
+              </p>
+              <p class="muted small">
+                It works once, in the next ten minutes. Anyone with it can open your timetable, so
+                only send it to yourself.
+              </p>
+            </div>
+          ) : (
+            <form method="post" action="/api/devices/link">
+              <button>Link another device</button>
+            </form>
+          )}
+          <div class="device-actions">
+            {devices > 1 && (
+              <form method="post" action="/api/devices/sign-out">
+                <input type="hidden" name="which" value="others" />
+                <button>Sign out other devices</button>
+              </form>
+            )}
+            <form method="post" action="/api/devices/sign-out">
+              <input type="hidden" name="which" value="this" />
+              <button>
+                {devices > 1 ? "Sign out this device" : "Sign out (this loses your timetable)"}
+              </button>
+            </form>
+          </div>
         </section>
 
         <section id="friends" aria-labelledby="friends-heading">

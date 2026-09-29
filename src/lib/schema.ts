@@ -92,16 +92,39 @@ export const occurrences = sqliteTable(
 // --- people: the state users create -----------------------------------------
 
 // No accounts. The share code is public (give it to a friend to be
-// overlaid); the token is secret and lives only in the owner's cookie, so
-// the database keeps just its hash.
+// overlaid); who may act as a person is a session (below).
 export const people = sqliteTable("people", {
   id: int().primaryKey({ autoIncrement: true }),
   name: text().notNull(),
   shareCode: text("share_code").notNull().unique(),
-  tokenHash: text("token_hash").notNull().unique(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(datetime('now'))`),
+});
+
+// One per device holding a timetable: the device's cookie carries a secret
+// token, and the database keeps only its hash. Several sessions per person
+// is what lets a timetable imported on a laptop be checked on a phone, and
+// what makes a lost cookie recoverable from another device.
+export const sessions = sqliteTable("sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  personId: int("person_id")
+    .notNull()
+    .references(() => people.id, { onDelete: "cascade" }),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(datetime('now'))`),
+});
+
+// A one-time code that lets a second device join a timetable: made on a
+// device that has it, claimed on one that doesn't, and short-lived, since
+// whoever holds it can act as that person.
+export const deviceLinks = sqliteTable("device_links", {
+  codeHash: text("code_hash").primaryKey(),
+  personId: int("person_id")
+    .notNull()
+    .references(() => people.id, { onDelete: "cascade" }),
+  expiresAt: text("expires_at").notNull(), // ISO 8601, UTC
 });
 
 // The classes in a person's timetable. An import replaces them wholesale in
@@ -145,3 +168,4 @@ export type Course = typeof courses.$inferSelect;
 export type Class = typeof classes.$inferSelect;
 export type Meeting = typeof meetings.$inferSelect;
 export type Person = typeof people.$inferSelect;
+export type Session = typeof sessions.$inferSelect;

@@ -308,3 +308,20 @@ nav {
   font-weight: 400;
   color: #555;
 }
+
+.link-code {
+  padding: 0.5rem 1rem;
+  border: 2px dashed #2f6fd6;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+
+.device-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.device-actions form {
+  margin: 0;
+}

@@ -29,6 +29,13 @@
       "when": 1790648278831,
       "tag": "0003_dated_occurrences",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790648715521,
+      "tag": "0004_device_sessions",
+      "breakpoints": true
     }
   ]
 }

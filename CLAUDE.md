@@ -59,6 +59,11 @@ first schema wrong, so hold these:
 Fixtures use COMP4020's classes (every student in the course has them) or
 synthetic courses built with `spec/fixtures/mytimetable.ts`.
 
+**A GET never spends anything.** Chat apps fetch pasted links to preview
+them, so a link that changes state on GET (claiming a device code, adding a
+friend) gets used by the preview. Show a confirm page, and change state on
+the POST.
+
 **The live stream says who, never what.** `/api/events` is public, so an event
 carries a person id and nothing else. Clients refetch their own page.
 
@@ -237,7 +242,10 @@ rest, so a broken build hides every spec result behind it.
     shows one-offs only in their own week
   - `live`: an import is announced on the stream, and only by id
   - `signed-in-a11y`: the axe floor on `/me/` and `/overlay/` with data on them
-  - `migrations`: child rows survive a migration that recreates their parent
+  - `migrations`: child rows survive a migration that recreates their parent,
+    and existing cookies survive the move to `sessions`
+  - `devices`: a one-time code opens a timetable on a second device, and
+    each device signs out alone
 - **evidence** (`pnpm check:evidence`): the submission gate.
   `reflections/crit-7.md` must exist, the `PROCESS.md` template comment must
   be gone, every citation must resolve to a real commit, and `CLAUDE.md` must
