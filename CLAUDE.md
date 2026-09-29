@@ -268,7 +268,11 @@ rest, so a broken build hides every spec result behind it.
   internal links.
 
 axe in jsdom has colour contrast switched off and is not the whole of
-accessibility. Nothing measures performance.
+accessibility. Contrast needs a real browser: on 29 Sep the full axe rule set
+was run by hand in headless Chrome over every page, signed in with data, at
+1280px and 390px. It found one failure jsdom couldn't see (today's phone day
+tab at 4.05:1), now fixed. Rerun it after any colour change. It isn't in
+`pnpm check` because it needs Chrome. Nothing measures performance.
 
 ## Platform traps (the rest is in the starter's comments)
 

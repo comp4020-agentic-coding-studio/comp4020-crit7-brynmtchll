@@ -453,6 +453,8 @@ label.confirm input {
   }
 
   .day-tabs a[aria-current] {
+    /* the link blue is 4.05:1 on this fill; darker text clears 4.5 */
+    color: #0b3b99;
     background: #d6e6ff;
     font-weight: 600;
   }
