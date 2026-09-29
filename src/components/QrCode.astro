@@ -1,0 +1,19 @@
+---
+import { renderSVG } from "uqr";
+
+// A QR code of a link, drawn on the server as SVG. It's for the moment a
+// laptop has something a phone needs (your own device link, or your share
+// link held up to a friend's camera); the same link is always on the page
+// as text too, so the picture is a shortcut, never the only way.
+interface Props {
+  value: string;
+  label: string;
+}
+
+const { value, label } = Astro.props;
+// the label can carry a person's name, which they chose, so escape it
+const escaped = label.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c);
+const svg = renderSVG(value, { ecc: "M", border: 2 }).replace("<svg ", `<svg role="img" aria-label="${escaped}" `);
+---
+
+<div class="qr" set:html={svg} />

@@ -1,5 +1,6 @@
 ---
 import ImportForm from "../../components/ImportForm.astro";
+import QrCode from "../../components/QrCode.astro";
 import Base from "../../layouts/Base.astro";
 import { formatDate } from "../../lib/dates";
 import { NAME_LENGTH, currentPerson, deviceCount, formatLinkCode } from "../../lib/people";
@@ -171,15 +172,21 @@ const skipped = Number(params.get("skipped") ?? 0);
           </p>
           {linkCode && linkUrl ? (
             <div class="notice" role="status">
-              <p>
-                On your other device, open this link, or go to <strong>/link</strong> and enter{" "}
-                <strong class="code">{formatLinkCode(linkCode)}</strong>
-              </p>
-              <div class="copy-field">
-                <input aria-label="Link for your other device" type="url" value={linkUrl} readonly />
-                <button type="button" data-copy={linkUrl} hidden>
-                  Copy link
-                </button>
+              <div class="share-grid">
+                <div>
+                  <p>
+                    <strong>Scan this with your phone's camera</strong>, or on your other device go to{" "}
+                    <strong>/link</strong> and enter
+                  </p>
+                  <p class="code">{formatLinkCode(linkCode)}</p>
+                  <div class="copy-field">
+                    <input aria-label="Link for your other device" type="url" value={linkUrl} readonly />
+                    <button type="button" data-copy={linkUrl} hidden>
+                      Copy link
+                    </button>
+                  </div>
+                </div>
+                <QrCode value={linkUrl} label="QR code that links your phone" />
               </div>
               <p class="fine">
                 It works once, in the next ten minutes. Anyone with it can open your timetable, so

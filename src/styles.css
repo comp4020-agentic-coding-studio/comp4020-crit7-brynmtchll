@@ -635,6 +635,16 @@ input[type="checkbox"] {
   height: 11rem;
 }
 
+.qr-figure {
+  margin: 0;
+  text-align: center;
+}
+
+.qr-figure figcaption {
+  max-width: 12.5rem;
+  margin-inline: auto;
+}
+
 .share-grid {
   display: grid;
   gap: 1rem 1.5rem;

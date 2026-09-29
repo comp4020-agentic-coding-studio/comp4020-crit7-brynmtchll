@@ -1,4 +1,5 @@
 ---
+import QrCode from "../../components/QrCode.astro";
 import Base from "../../layouts/Base.astro";
 import { type FollowResult, followersOf, friendsOf } from "../../lib/friends";
 import { LIMITED, clientOf, guardedLookup } from "../../lib/limits";
@@ -117,28 +118,36 @@ const followError = outcome ? FOLLOW_ERRORS[outcome] : undefined;
               still sees you: remove them below if that's the point.
             </p>
           )}
-          <p>Friends add you with your code:</p>
-          <div class="actions">
-            <strong class="share-code code">{me.shareCode}</strong>
-            <button type="button" class="small" data-copy={me.shareCode} hidden>
-              Copy code
-            </button>
-          </div>
-          <label for="share-link" class="spaced">Or send your link</label>
-          <div class="copy-field">
-            <input id="share-link" type="url" value={shareLink} readonly />
-            <button type="button" data-copy={shareLink} hidden>
-              Copy link
-            </button>
-            <button
-              type="button"
-              class="primary"
-              data-share={shareLink}
-              data-share-title={`Add ${me.name}'s timetable`}
-              hidden
-            >
-              Share…
-            </button>
+          <div class="share-grid">
+            <div>
+              <p>Friends add you with your code:</p>
+              <div class="actions">
+                <strong class="share-code code">{me.shareCode}</strong>
+                <button type="button" class="small" data-copy={me.shareCode} hidden>
+                  Copy code
+                </button>
+              </div>
+              <label for="share-link" class="spaced">Or send your link</label>
+              <div class="copy-field">
+                <input id="share-link" type="url" value={shareLink} readonly />
+                <button type="button" data-copy={shareLink} hidden>
+                  Copy link
+                </button>
+                <button
+                  type="button"
+                  class="primary"
+                  data-share={shareLink}
+                  data-share-title={`Add ${me.name}'s timetable`}
+                  hidden
+                >
+                  Share…
+                </button>
+              </div>
+            </div>
+            <figure class="qr-figure">
+              <QrCode value={shareLink} label="QR code of your share link" />
+              <figcaption>In person: they scan this with their phone's camera.</figcaption>
+            </figure>
           </div>
           <p class="fine">
             Anyone with your code or link can see your week. Only share it with people you'd tell
