@@ -33,3 +33,22 @@ export function friendsOf(me: Person): Person[] {
     .all()
     .map((row) => row.person);
 }
+
+// The other direction: everyone who has your code and overlays you. Since
+// knowing a code is the permission, this list is who can see your week.
+export function followersOf(me: Person): Person[] {
+  return db
+    .select({ person: people })
+    .from(follows)
+    .innerJoin(people, eq(people.id, follows.followerId))
+    .where(eq(follows.followeeId, me.id))
+    .orderBy(asc(follows.createdAt), asc(people.id))
+    .all()
+    .map((row) => row.person);
+}
+
+export function removeFollower(me: Person, followerId: number): void {
+  db.delete(follows)
+    .where(and(eq(follows.followerId, followerId), eq(follows.followeeId, me.id)))
+    .run();
+}

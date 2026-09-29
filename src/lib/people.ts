@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomInt } from "node:crypto";
 import type { AstroCookies } from "astro";
 import { and, count, eq, gt, lte, ne } from "drizzle-orm";
 import { db } from "./db";
+import { announce } from "./events";
 import { deviceLinks, type Person, people, sessions } from "./schema";
 
 // Who you are is a secret token in a cookie, one per device (a session);
@@ -152,4 +153,30 @@ export function signOutOtherDevices(me: Person, cookies: AstroCookies): void {
   db.delete(sessions)
     .where(and(eq(sessions.personId, me.id), ne(sessions.tokenHash, tokenHash)))
     .run();
+}
+
+// --- your code, and yourself ------------------------------------------------
+
+// A new share code stops the old one working for anyone who hasn't used it
+// yet. People who already added you keep seeing you; removing them is
+// removeFollower's job.
+export function rotateShareCode(me: Person): void {
+  for (;;) {
+    try {
+      db.update(people).set({ shareCode: newCode(SHARE_CODE_LENGTH) }).where(eq(people.id, me.id)).run();
+      return;
+    } catch (error) {
+      if (!String(error).includes("people.share_code")) throw error;
+    }
+  }
+}
+
+// Everything about a person goes with them: the foreign keys cascade to
+// their sessions, device links, picks, and follows in both directions. The
+// shared catalogue rows stay, since they describe ANU's classes, not them.
+export function deletePerson(me: Person, cookies: AstroCookies): void {
+  db.delete(people).where(eq(people.id, me.id)).run();
+  cookies.delete(COOKIE, { path: "/" });
+  // anyone overlaying them reloads, and they drop out
+  announce({ personId: me.id });
 }

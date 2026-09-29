@@ -38,6 +38,13 @@ class right now" is a phone question, so a timetable can be linked to more
 devices. A one-time code, made on a device that has the timetable, works
 once, within ten minutes, and each device can be signed out on its own.
 
+**Your code is the permission, so you control it.** Since anyone with your
+code can see your week, the app shows who has added you and lets you remove
+them. Getting a new code stops the old one working, and deleting your
+timetable takes it off every device and every friend's overlay. A share link
+works for someone who hasn't made a timetable yet: it carries your code
+through their sign-up, then offers to add you.
+
 **What's checked and what's judgement.** `spec/` checks the parts that can be
 checked:
 
@@ -52,7 +59,6 @@ Whether the grid is actually readable, and whether this beats a group chat,
 is for a person to judge.
 
 **What it doesn't do.** Lose the cookie on every device a timetable is linked
-to, and the timetable is gone, since there's nothing else to prove it's yours.
-There's no way to delete one. The catalogue trusts
+to, and the timetable is gone, since there's nothing else to prove it's yours. The catalogue trusts
 imports: the newest export of a class decides when that class meets for
 everyone who holds it. Course codes are assumed to mean this semester.

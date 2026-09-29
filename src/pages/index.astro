@@ -1,8 +1,12 @@
 ---
 import Base from "../layouts/Base.astro";
-import { currentPerson } from "../lib/people";
+import { currentPerson, normaliseShareCode, personByShareCode } from "../lib/people";
 
 const me = currentPerson(Astro.cookies);
+// from a friend's share link, carried through making a timetable
+const add = normaliseShareCode(Astro.url.searchParams.get("add") ?? "");
+const inviter = add ? personByShareCode(add) : undefined;
+const deleted = Astro.url.searchParams.has("deleted");
 ---
 
 <Base title="Home">
@@ -11,18 +15,30 @@ const me = currentPerson(Astro.cookies);
     See your ANU timetable alongside your friends': who shares your tutes, when
     you're all free, and who's in class right now.
   </p>
+  {deleted && <p role="status">Your timetable is deleted.</p>}
   {
     me ? (
       <p>
-        Welcome back, {me.name}. Go to <a href="/me/">your timetable</a> or the{" "}
-        <a href="/overlay/">overlay</a>.
+        Welcome back, {me.name}. Go to <a href={inviter ? `/me/?add=${add}#friends` : "/me/"}>your timetable</a>{" "}
+        or the <a href="/overlay/">overlay</a>.
       </p>
     ) : (
-      <form method="post" action="/api/people">
-        <label for="name">Your name, as friends know you</label>
-        <input id="name" name="name" required maxlength="40" autocomplete="nickname" />
-        <button>Make my timetable</button>
-      </form>
+      <>
+        {inviter && (
+          <p>
+            <strong>{inviter.name}</strong> wants to share timetables. Make yours, then add them.
+          </p>
+        )}
+        <form method="post" action="/api/people">
+          <label for="name">Your name, as friends know you</label>
+          <input id="name" name="name" required maxlength="40" autocomplete="nickname" />
+          {inviter && <input type="hidden" name="add" value={add} />}
+          <button>Make my timetable</button>
+        </form>
+        <p>
+          Already have one on another device? <a href="/link/">Link this device</a>.
+        </p>
+      </>
     )
   }
 </Base>

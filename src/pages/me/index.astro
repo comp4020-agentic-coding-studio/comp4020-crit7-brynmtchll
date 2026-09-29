@@ -1,7 +1,13 @@
 ---
 import Base from "../../layouts/Base.astro";
-import { type FollowResult, friendsOf } from "../../lib/friends";
-import { currentPerson, deviceCount, formatLinkCode } from "../../lib/people";
+import { type FollowResult, followersOf, friendsOf } from "../../lib/friends";
+import {
+  currentPerson,
+  deviceCount,
+  formatLinkCode,
+  normaliseShareCode,
+  personByShareCode,
+} from "../../lib/people";
 import { formatDate } from "../../lib/dates";
 import { DAYS, activityLabel, clock, isOneOff, slotsFor } from "../../lib/timetable";
 
@@ -14,6 +20,13 @@ const oneOffs = slots
   .sort((a, b) => a.dates[0].localeCompare(b.dates[0]) || a.start - b.start);
 
 const params = Astro.url.searchParams;
+const followers = me ? followersOf(me) : [];
+const shareLink = me ? new URL(`/me/?add=${me.shareCode}`, Astro.url).href : undefined;
+// arriving from someone's share link: offer to add them (a GET only offers;
+// the button's POST adds)
+const addCode = normaliseShareCode(params.get("add") ?? "");
+const invitedBy = addCode ? personByShareCode(addCode) : undefined;
+const alreadyFriends = invitedBy ? friends.some((f) => f.id === invitedBy.id) : false;
 const devices = me ? deviceCount(me) : 0;
 const linkCode = params.get("link");
 const linkUrl = linkCode ? new URL(`/link/?code=${linkCode}`, Astro.url).href : undefined;
@@ -50,12 +63,41 @@ const importMessage = (() => {
   {
     me ? (
       <>
-        <section aria-labelledby="share-heading">
+        {invitedBy && invitedBy.id !== me.id && (
+          <section class="invite" aria-labelledby="invite-heading">
+            <h2 id="invite-heading">Add {invitedBy.name}?</h2>
+            {alreadyFriends ? (
+              <p>{invitedBy.name} is already on your overlay.</p>
+            ) : (
+              <form method="post" action="/api/friends">
+                <input type="hidden" name="code" value={addCode} />
+                <button>Add {invitedBy.name} to my overlay</button>
+              </form>
+            )}
+          </section>
+        )}
+        {addCode && !invitedBy && (
+          <p role="alert">That share link doesn't match anyone's timetable. It may have been replaced.</p>
+        )}
+
+        <section id="share" aria-labelledby="share-heading">
           <h2 id="share-heading">Your share code</h2>
+          {params.get("code") === "new" && (
+            <p role="status">
+              New code. The old one no longer works, but anyone who already added you still sees
+              you: remove them below if that's the point.
+            </p>
+          )}
           <p>
             Give this to friends so they can overlay your timetable:{" "}
             <strong class="share-code">{me.shareCode}</strong>
           </p>
+          <p>
+            Or send the link: <a href={shareLink}>{shareLink}</a>
+          </p>
+          <form method="post" action="/api/people/share-code">
+            <button>Get a new code</button>
+          </form>
         </section>
 
         <section id="timetable" aria-labelledby="timetable-heading">
@@ -172,8 +214,9 @@ const importMessage = (() => {
             />
             <button>Add friend</button>
           </form>
+          <h3>On your overlay</h3>
           {friends.length === 0 ? (
-            <p>No friends yet. Ask someone for their code.</p>
+            <p>No one yet. Ask someone for their code.</p>
           ) : (
             <ul class="friends">
               {friends.map((friend) => (
@@ -181,18 +224,63 @@ const importMessage = (() => {
                   <span>{friend.name}</span>
                   <form method="post" action="/api/friends/remove">
                     <input type="hidden" name="friend" value={friend.id} />
-                    <button aria-label={`Remove ${friend.name}`}>Remove</button>
+                    <button aria-label={`Remove ${friend.name} from your overlay`}>Remove</button>
                   </form>
                 </li>
               ))}
             </ul>
           )}
         </section>
+
+        <section id="visible" aria-labelledby="visible-heading">
+          <h2 id="visible-heading">Who can see you</h2>
+          {params.get("follower") === "removed" && (
+            <p role="status">Removed. They'd need your code again to add you back.</p>
+          )}
+          {followers.length === 0 ? (
+            <p>Nobody has added your code yet.</p>
+          ) : (
+            <>
+              <p>These people added your code, so your week is on their overlay.</p>
+              <ul class="friends">
+                {followers.map((follower) => (
+                  <li>
+                    <span>{follower.name}</span>
+                    <form method="post" action="/api/friends/remove-follower">
+                      <input type="hidden" name="follower" value={follower.id} />
+                      <button aria-label={`Stop ${follower.name} seeing your timetable`}>Remove</button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+
+        <section id="delete" aria-labelledby="delete-heading" class="danger">
+          <h2 id="delete-heading">Delete your timetable</h2>
+          <p>
+            This deletes your timetable, your friends list and your share code, from every device,
+            and takes you off everyone's overlay. It can't be undone.
+          </p>
+          {params.get("delete") === "unconfirmed" && (
+            <p role="alert">Tick the box to confirm. Nothing was deleted.</p>
+          )}
+          <form method="post" action="/api/people/delete" class="stacked">
+            <label class="confirm">
+              <input type="checkbox" name="confirm" value="yes" required />
+              I understand this can't be undone
+            </label>
+            <button>Delete my timetable</button>
+          </form>
+        </section>
       </>
     ) : (
       <p>
-        You don't have a timetable on this device yet. <a href="/">Make one</a>
-        — it takes a name.
+        You don't have a timetable on this device yet.{" "}
+        <a href={addCode ? `/?add=${addCode}` : "/"}>Make one</a>, which takes a name
+        {addCode && ", and then you can add the friend who sent you here"}. If it's on another
+        device of yours, <a href="/link/">link this one</a>.
       </p>
     )
   }

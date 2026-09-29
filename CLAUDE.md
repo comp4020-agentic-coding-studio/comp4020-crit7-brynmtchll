@@ -246,6 +246,9 @@ rest, so a broken build hides every spec result behind it.
     and existing cookies survive the move to `sessions`
   - `devices`: a one-time code opens a timetable on a second device, and
     each device signs out alone
+  - `privacy`: who can see you and removing them, a new code retiring the
+    old one, deletion reaching friends' overlays, and a share link carried
+    through sign-up
 - **evidence** (`pnpm check:evidence`): the submission gate.
   `reflections/crit-7.md` must exist, the `PROCESS.md` template comment must
   be gone, every citation must resolve to a real commit, and `CLAUDE.md` must
