@@ -1,7 +1,7 @@
 ---
 import Base from "../../layouts/Base.astro";
 import { friendsOf } from "../../lib/friends";
-import { COLOURS, placeOnGrid } from "../../lib/overlay";
+import { COLOURS, placeOnGrid, sharedWith } from "../../lib/overlay";
 import { currentPerson } from "../../lib/people";
 import { DAYS, activityLabel, clock, slotsFor } from "../../lib/timetable";
 
@@ -25,6 +25,12 @@ const grid = placeOnGrid(
   slots.filter((s) => shownIds.includes(s.personId)),
   shownIds,
 );
+const shared = me ? sharedWith(slots, me.id, shownIds) : [];
+const sharedIds = new Set(shared.map((c) => c.classId));
+const list = (ids: number[]): string => {
+  const names = ids.map((id) => nameOf.get(id) ?? "");
+  return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+};
 const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => grid.from + i * 60);
 ---
 
@@ -79,7 +85,7 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
                 <ol class="day-body">
                   {blocks.map((b) => (
                     <li
-                      class="block"
+                      class:list={["block", { shared: sharedIds.has(b.classId) }]}
                       style={[
                         `top: ${b.top}%`,
                         `height: ${b.height}%`,
@@ -96,12 +102,33 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
                       <strong>{b.courseCode}</strong>{" "}
                       <span class="kind">{activityLabel(b.activity)}</span>{" "}
                       <span class="who">{nameOf.get(b.personId)}</span>
+                      {sharedIds.has(b.classId) && <span class="visually-hidden">(shared)</span>}
                     </li>
                   ))}
                 </ol>
               </section>
             ))}
           </div>
+        </section>
+
+        <section aria-labelledby="shared-heading">
+          <h2 id="shared-heading">Classes you share</h2>
+          {shownIds.length < 2 ? (
+            <p>Show a friend above to see which classes you share.</p>
+          ) : shared.length === 0 ? (
+            <p>You don't share any classes with {list(shownIds.filter((id) => id !== me.id))}.</p>
+          ) : (
+            <ul class="shared-list">
+              {shared.map((c) => (
+                <li>
+                  <strong>{c.courseCode}</strong> {activityLabel(c.activity)} {c.group},{" "}
+                  {c.meetings.map((m) => `${DAYS[m.day - 1]} ${clock(m.start)}–${clock(m.end)}`).join(" and ")}{" "}
+                  with {list(c.friends)}
+                  {c.meetings[0].room && <span class="room"> · {c.meetings[0].room}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </>
     )

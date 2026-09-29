@@ -68,3 +68,40 @@ export const COLOURS = [
   { fill: "#cdf0ee", edge: "#1f8a85" },
   { fill: "#e7e2d8", edge: "#7a6a4f" },
 ];
+
+export type SharedClass = {
+  classId: number;
+  courseCode: string;
+  activity: string;
+  group: string;
+  meetings: { day: number; start: number; end: number; room: string | null }[];
+  friends: number[]; // who you share it with, in overlay order
+};
+
+// Classes you hold that a shown friend holds too. Because the catalogue is
+// shared, "the same class" is one row: this is a group-by on class id, not a
+// fuzzy match on course code and time.
+export function sharedWith(slots: Slot[], me: number, people: number[]): SharedClass[] {
+  const byClass = new Map<number, Slot[]>();
+  for (const s of slots) {
+    if (!people.includes(s.personId)) continue;
+    byClass.set(s.classId, [...(byClass.get(s.classId) ?? []), s]);
+  }
+  const shared: SharedClass[] = [];
+  for (const [classId, rows] of byClass) {
+    const holders = new Set(rows.map((r) => r.personId));
+    if (!holders.has(me) || holders.size < 2) continue;
+    const mine = rows.filter((r) => r.personId === me);
+    shared.push({
+      classId,
+      courseCode: mine[0].courseCode,
+      activity: mine[0].activity,
+      group: mine[0].group,
+      meetings: mine.map(({ day, start, end, room }) => ({ day, start, end, room })),
+      friends: people.filter((p) => p !== me && holders.has(p)),
+    });
+  }
+  return shared.sort(
+    (a, b) => a.meetings[0].day - b.meetings[0].day || a.meetings[0].start - b.meetings[0].start,
+  );
+}

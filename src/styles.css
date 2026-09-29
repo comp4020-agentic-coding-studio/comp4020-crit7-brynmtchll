@@ -224,3 +224,13 @@ nav {
 .week {
   padding-bottom: 0.75rem; /* room for the last hour label */
 }
+
+/* a class you share: the dashed ring shows up in every lane that holds it */
+.block.shared {
+  outline: 2px dashed var(--edge);
+  outline-offset: -2px;
+}
+
+.shared-list {
+  padding-inline-start: 1.2rem;
+}
