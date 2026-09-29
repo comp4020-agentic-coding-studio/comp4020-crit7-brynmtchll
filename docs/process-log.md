@@ -312,3 +312,20 @@ first check that the new test could fail was itself vacuous: `git stash`
 restored a README with no image. Redone by breaking a copy. Also went into
 `CLAUDE.md`.
 
+## 21. Guessing codes
+
+A share code is the whole permission to see someone's week, and nothing
+limited guessing. 31^6 codes, a thousand users, about 900k guesses to hit
+someone: hours, unthrottled. `/?add=CODE` also named a code's owner on a
+GET. Every lookup by code now goes through one guard: 20 failures per client
+per 10 minutes, in memory (one machine), keyed on `Fly-Client-IP`.
+[`df092a2`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/df092a2)
+
+The limiter is only as good as that header being unforgeable, and Fly's docs
+don't say. One other project's live test said Fly overwrites a client-sent
+value, and another project calls that unverified. So I tested our own
+deployment: 20 bad device codes, each with a different forged
+`Fly-Client-IP`, then a 21st. It was refused, so all 20 had counted against
+the real address. Side effect: this laptop's address couldn't look up codes
+on the live site for ten minutes.
+

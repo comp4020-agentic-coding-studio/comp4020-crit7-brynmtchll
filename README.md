@@ -47,7 +47,9 @@ code can see your week, the app shows who has added you and lets you remove
 them. Getting a new code stops the old one working, and deleting your
 timetable takes it off every device and every friend's overlay. A share link
 works for someone who hasn't made a timetable yet: it carries your code
-through their sign-up, then offers to add you.
+through their sign-up, then offers to add you. Guessing codes is slow on
+purpose: after 20 codes that don't match in ten minutes, a client is refused
+until the window passes, even for a right code.
 
 **What's checked and what's judgement.** `spec/` checks the parts that can be
 checked:
