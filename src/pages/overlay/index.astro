@@ -1,0 +1,116 @@
+---
+import Base from "../../layouts/Base.astro";
+import { friendsOf } from "../../lib/friends";
+import { COLOURS, placeOnGrid } from "../../lib/overlay";
+import { currentPerson } from "../../lib/people";
+import { DAYS, activityLabel, clock, slotsFor } from "../../lib/timetable";
+
+const me = currentPerson(Astro.cookies);
+const everyone = me ? [me, ...friendsOf(me)] : [];
+
+// Who's toggled on rides in the query string, so the toggles are a plain
+// GET form. No "filtered" flag means nobody has touched them: show everyone.
+const params = Astro.url.searchParams;
+const shown = params.has("filtered")
+  ? everyone.filter((p) => params.getAll("show").includes(String(p.id)))
+  : everyone;
+const shownIds = shown.map((p) => p.id);
+
+const colour = new Map(everyone.map((p, i) => [p.id, COLOURS[i % COLOURS.length]]));
+const nameOf = new Map(everyone.map((p) => [p.id, p.id === me?.id ? "You" : p.name]));
+
+const slots = slotsFor(everyone.map((p) => p.id));
+const hasTimetable = new Set(slots.map((s) => s.personId));
+const grid = placeOnGrid(
+  slots.filter((s) => shownIds.includes(s.personId)),
+  shownIds,
+);
+const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => grid.from + i * 60);
+---
+
+<Base title="Overlay" wide>
+  <h1>Overlay</h1>
+  {
+    !me ? (
+      <p>
+        You don't have a timetable on this device yet. <a href="/">Make one</a>, import your
+        MyTimetable export, and add friends to see them here.
+      </p>
+    ) : (
+      <>
+        <form method="get" class="people" id="people">
+          <input type="hidden" name="filtered" value="1" />
+          <fieldset>
+            <legend>Show</legend>
+            {everyone.map((p) => (
+              <label style={`--fill: ${colour.get(p.id)?.fill}; --edge: ${colour.get(p.id)?.edge}`}>
+                <input type="checkbox" name="show" value={p.id} checked={shownIds.includes(p.id)} />
+                {nameOf.get(p.id)}
+                {!hasTimetable.has(p.id) && <span class="muted"> (no timetable yet)</span>}
+              </label>
+            ))}
+          </fieldset>
+          <button>Update</button>
+        </form>
+
+        {everyone.length === 1 && (
+          <p>
+            It's just you so far. <a href="/me/#friends">Add friends</a> by their share code to
+            overlay them.
+          </p>
+        )}
+
+        <section aria-labelledby="week-heading" class="week-wrap">
+          <h2 id="week-heading">This week</h2>
+          <div
+            class="week"
+            style={`--hours: ${(grid.to - grid.from) / 60}`}
+          >
+            <div class="hours" aria-hidden="true">
+              {hours.map((h) => (
+                <span style={`top: ${((h - grid.from) / (grid.to - grid.from)) * 100}%`}>
+                  {clock(h)}
+                </span>
+              ))}
+            </div>
+            {grid.days.map((blocks, i) => (
+              <section class="day" aria-labelledby={`day-${i}`}>
+                <h3 id={`day-${i}`}>{DAYS[i]}</h3>
+                <ol class="day-body">
+                  {blocks.map((b) => (
+                    <li
+                      class="block"
+                      style={[
+                        `top: ${b.top}%`,
+                        `height: ${b.height}%`,
+                        `left: ${b.left}%`,
+                        `width: ${b.width}%`,
+                        `--fill: ${colour.get(b.personId)?.fill}`,
+                        `--edge: ${colour.get(b.personId)?.edge}`,
+                      ].join("; ")}
+                      title={`${nameOf.get(b.personId)}: ${b.courseCode} ${activityLabel(b.activity)} ${b.group}, ${clock(b.start)}–${clock(b.end)}${b.room ? `, ${b.room}` : ""}`}
+                    >
+                      <span class="visually-hidden">
+                        {clock(b.start)}–{clock(b.end)},{" "}
+                      </span>
+                      <strong>{b.courseCode}</strong>{" "}
+                      <span class="kind">{activityLabel(b.activity)}</span>{" "}
+                      <span class="who">{nameOf.get(b.personId)}</span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            ))}
+          </div>
+        </section>
+      </>
+    )
+  }
+</Base>
+
+<script>
+  // Toggling a person applies straight away; without JavaScript the Update
+  // button does the same.
+  const form = document.querySelector<HTMLFormElement>("#people");
+  form?.addEventListener("change", () => form.requestSubmit());
+</script>
