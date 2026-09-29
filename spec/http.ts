@@ -7,17 +7,24 @@ export const baseUrl = inject("baseUrl");
 
 export type Visitor = { cookie: string; shareCode: string };
 
-export function post(path: string, body: FormData | URLSearchParams, cookie = ""): Promise<Response> {
+// `headers` lets a test be a particular client: the app tells clients
+// apart by Fly-Client-IP when it limits code guessing (src/lib/limits.ts).
+export function post(
+  path: string,
+  body: FormData | URLSearchParams,
+  cookie = "",
+  headers: Record<string, string> = {},
+): Promise<Response> {
   return fetch(new URL(path, baseUrl), {
     method: "POST",
-    headers: { origin: baseUrl, cookie },
+    headers: { origin: baseUrl, cookie, ...headers },
     body,
     redirect: "manual",
   });
 }
 
-export async function page(path: string, cookie = ""): Promise<string> {
-  const res = await fetch(new URL(path, baseUrl), { headers: { cookie } });
+export async function page(path: string, cookie = "", headers: Record<string, string> = {}): Promise<string> {
+  const res = await fetch(new URL(path, baseUrl), { headers: { cookie, ...headers } });
   return res.text();
 }
 

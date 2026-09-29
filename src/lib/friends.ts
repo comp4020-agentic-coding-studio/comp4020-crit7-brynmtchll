@@ -1,12 +1,14 @@
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "./db";
+import { LIMITED, guardedLookup } from "./limits";
 import { personByShareCode } from "./people";
 import { follows, type Person, people } from "./schema";
 
-export type FollowResult = "added" | "unknown" | "self";
+export type FollowResult = "added" | "unknown" | "self" | "limited";
 
-export function follow(me: Person, code: string): FollowResult {
-  const friend = personByShareCode(code);
+export function follow(me: Person, code: string, client: string): FollowResult {
+  const friend = guardedLookup(client, () => personByShareCode(code));
+  if (friend === LIMITED) return "limited";
   if (!friend) return "unknown";
   if (friend.id === me.id) return "self";
   // Adding someone twice is harmless: the primary key makes it a no-op.

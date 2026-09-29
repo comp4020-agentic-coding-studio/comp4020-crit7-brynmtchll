@@ -1,5 +1,6 @@
 ---
 import ImportForm from "../../components/ImportForm.astro";
+import { LIMITED, clientOf, guardedLookup } from "../../lib/limits";
 import Base from "../../layouts/Base.astro";
 import { type FollowResult, followersOf, friendsOf } from "../../lib/friends";
 import {
@@ -26,7 +27,11 @@ const shareLink = me ? new URL(`/me/?add=${me.shareCode}`, Astro.url).href : und
 // arriving from someone's share link: offer to add them (a GET only offers;
 // the button's POST adds)
 const addCode = normaliseShareCode(params.get("add") ?? "");
-const invitedBy = addCode ? personByShareCode(addCode) : undefined;
+const lookedUp = addCode
+  ? guardedLookup(clientOf(Astro.request, Astro.clientAddress), () => personByShareCode(addCode))
+  : undefined;
+const addLimited = lookedUp === LIMITED;
+const invitedBy = lookedUp === LIMITED ? undefined : lookedUp;
 const alreadyFriends = invitedBy ? friends.some((f) => f.id === invitedBy.id) : false;
 const devices = me ? deviceCount(me) : 0;
 const linkCode = params.get("link");
@@ -36,6 +41,7 @@ const FOLLOW_MESSAGES: Record<FollowResult, string> = {
   added: "Friend added. They're on your overlay now.",
   unknown: "No timetable has that code. Check it with your friend.",
   self: "That's your own code.",
+  limited: "Too many codes that didn't match from here. Wait ten minutes, and check the code with your friend.",
 };
 const followOutcome = params.get("friend") as FollowResult | null;
 const followMessage = followOutcome ? FOLLOW_MESSAGES[followOutcome] : undefined;
@@ -79,7 +85,11 @@ const importError = params.get("import") !== "ok" ? importMessage : undefined;
           </section>
         )}
         {addCode && !invitedBy && (
-          <p role="alert">That share link doesn't match anyone's timetable. It may have been replaced.</p>
+          <p role="alert">
+            {addLimited
+              ? FOLLOW_MESSAGES.limited
+              : "That share link doesn't match anyone's timetable. It may have been replaced."}
+          </p>
         )}
 
         {slots.length === 0 && <ImportForm first error={importError} />}

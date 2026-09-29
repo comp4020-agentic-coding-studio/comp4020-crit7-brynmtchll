@@ -1,11 +1,14 @@
 ---
 import Base from "../layouts/Base.astro";
+import { LIMITED, clientOf, guardedLookup } from "../lib/limits";
 import { currentPerson, normaliseShareCode, personByShareCode } from "../lib/people";
 
 const me = currentPerson(Astro.cookies);
 // from a friend's share link, carried through making a timetable
 const add = normaliseShareCode(Astro.url.searchParams.get("add") ?? "");
-const inviter = add ? personByShareCode(add) : undefined;
+// (guarded: a GET that names a code's owner is as good as adding them)
+const found = add ? guardedLookup(clientOf(Astro.request, Astro.clientAddress), () => personByShareCode(add)) : undefined;
+const inviter = found === LIMITED ? undefined : found;
 const deleted = Astro.url.searchParams.has("deleted");
 ---
 

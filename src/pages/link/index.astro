@@ -1,18 +1,29 @@
 ---
 import Base from "../../layouts/Base.astro";
+import { LIMITED, clientOf, guardedLookup } from "../../lib/limits";
 import { currentPerson, formatLinkCode, normaliseShareCode, peekDeviceLink } from "../../lib/people";
 
 // Opening a timetable on a second device. Reading this page changes nothing;
 // the code is only spent by the button, so a chat app previewing the link
 // can't use it up.
 const code = normaliseShareCode(Astro.url.searchParams.get("code") ?? "");
-const owner = code ? peekDeviceLink(code) : undefined;
+const found = code ? guardedLookup(clientOf(Astro.request, Astro.clientAddress), () => peekDeviceLink(code)) : undefined;
+const limited = found === LIMITED || Astro.url.searchParams.get("failed") === "limited";
+const owner = found === LIMITED ? undefined : found;
 const here = currentPerson(Astro.cookies);
-const failed = Astro.url.searchParams.has("failed");
+const failed = Astro.url.searchParams.has("failed") && !limited;
 ---
 
 <Base title="Link this device">
   <h1>Link this device</h1>
+  {
+    limited && (
+      <p role="alert">
+        Too many codes that didn't match from here. Wait ten minutes, then make a fresh code on
+        your other device.
+      </p>
+    )
+  }
   {
     failed && (
       <p role="alert">
@@ -40,7 +51,7 @@ const failed = Astro.url.searchParams.has("failed");
       </>
     ) : (
       <>
-        {code && !failed && <p role="alert">That code has expired or been used.</p>}
+        {code && !failed && !limited && <p role="alert">That code has expired or been used.</p>}
         <p>
           On a device that has your timetable, go to <a href="/me/#devices">My timetable</a> and
           choose "Link another device". Then enter the code here.

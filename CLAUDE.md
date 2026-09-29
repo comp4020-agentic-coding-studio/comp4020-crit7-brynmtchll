@@ -65,6 +65,14 @@ let one person's import write rows another person's view reads.
 Fixtures use COMP4020's classes (every student in the course has them) or
 synthetic courses built with `spec/fixtures/mytimetable.ts`.
 
+**Code lookups go through `guardedLookup`.** A share code is a permission
+and a device code is an identity, so every lookup by code (adding a friend,
+a share link, a device link, and the GETs that name a code's owner) is
+limited to 20 failures per client per 10 minutes (`src/lib/limits.ts`).
+Clients are told apart by `Fly-Client-IP`, which is only safe because Fly's
+proxy overwrites a client-sent one. Re-check that if anything is ever put
+in front of Fly.
+
 **A GET never spends anything.** Chat apps fetch pasted links to preview
 them, so a link that changes state on GET (claiming a device code, adding a
 friend) gets used by the preview. Show a confirm page, and change state on
@@ -257,6 +265,8 @@ rest, so a broken build hides every spec result behind it.
     old one, deletion reaching friends' overlays, and a share link carried
     through sign-up
   - `images`: every image on every route loads as a plain file
+  - `limits`: too many failed code lookups refuse a client, even for a right
+    code, across every place codes are looked up
 - **evidence** (`pnpm check:evidence`): the submission gate.
   `reflections/crit-7.md` must exist, the `PROCESS.md` template comment must
   be gone, every citation must resolve to a real commit, and `CLAUDE.md` must
