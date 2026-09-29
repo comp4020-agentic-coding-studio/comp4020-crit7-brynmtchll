@@ -113,4 +113,20 @@ describe("someone else's import", () => {
     expect(week).toContain("10:30–12:00"); // our tute, where our exports put it
     expect(week).not.toContain("07:00–08:00");
   });
+
+  it("can't rename a course in a friend's week", async () => {
+    // a stranger imports a course first, under a false title
+    const stranger = await makeTimetable("Renamer");
+    const course = (title: string) =>
+      weekly({ course: "TITL1001", title, activity: "LecA", group: "01", start: "0900", end: "1000" }, WEEKS.tue);
+    await importCalendar(stranger, myTimetable(course("Something False")));
+    const late = await makeTimetable("Late importer");
+    await importCalendar(late, myTimetable(course("Its Real Title")));
+
+    const html = await page(OVERLAY, late.cookie);
+    expect(html).toContain("Its Real Title");
+    expect(html).not.toContain("Something False");
+    // and the stranger still sees their own: titles are per person, not absent
+    expect(await page(OVERLAY, stranger.cookie)).toContain("Something False");
+  });
 });

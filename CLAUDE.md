@@ -55,10 +55,11 @@ first schema wrong, so hold these:
   now" go by `occurrences`, never by the weekly shape alone. A meeting with no
   dates predates the table and is read as weekly.
 
-**Classes are shared; meetings are not.** A class row (course, activity,
-group) is shared, and that's what "you share a class" means. Its meetings
-and dates belong to the person whose export they came from. Never let one
-person's import write rows another person's view reads.
+**Classes are shared; everything read off an export is not.** A class row
+(course, activity, group) is shared, and that's what "you share a class"
+means. Its meetings, dates and the course's title belong to the person whose
+export they came from (`meetings.person_id`, `picks.course_title`). Never
+let one person's import write rows another person's view reads.
 
 **Never commit a personal export.** The repo goes public at the cutoff.
 Fixtures use COMP4020's classes (every student in the course has them) or
@@ -248,8 +249,8 @@ rest, so a broken build hides every spec result behind it.
   - `live`: an import is announced on the stream, and only by id
   - `signed-in-a11y`: the axe floor on `/me/` and `/overlay/` with data on them
   - `migrations`: from each previous state with data in it, child rows
-    survive a table rebuild, cookies survive the move to `sessions`, and
-    shared meetings fan out to per-person copies
+    survive a table rebuild, cookies survive the move to `sessions`, shared
+    meetings fan out to per-person copies, and titles move onto picks
   - `devices`: a one-time code opens a timetable on a second device, and
     each device signs out alone
   - `privacy`: who can see you and removing them, a new code retiring the

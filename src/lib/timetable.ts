@@ -35,10 +35,7 @@ export function importTimetable(me: Person, parsed: ParsedTimetable): void {
     tx.delete(meetings).where(eq(meetings.personId, me.id)).run();
     tx.delete(picks).where(eq(picks.personId, me.id)).run();
     for (const c of parsed.classes) {
-      tx.insert(courses)
-        .values({ code: c.courseCode, title: c.courseTitle })
-        .onConflictDoNothing()
-        .run();
+      tx.insert(courses).values({ code: c.courseCode }).onConflictDoNothing().run();
       tx.insert(classes)
         .values({ courseCode: c.courseCode, activity: c.activity, group: c.group })
         .onConflictDoNothing()
@@ -64,7 +61,10 @@ export function importTimetable(me: Person, parsed: ParsedTimetable): void {
         m.dates.map((date) => ({ meetingId: inserted[i].id, date })),
       );
       if (dated.length > 0) tx.insert(occurrences).values(dated).run();
-      tx.insert(picks).values({ personId: me.id, classId: row.id }).onConflictDoNothing().run();
+      tx.insert(picks)
+        .values({ personId: me.id, classId: row.id, courseTitle: c.courseTitle })
+        .onConflictDoNothing()
+        .run();
     }
   });
   announce({ personId: me.id });
@@ -95,7 +95,7 @@ export function slotsFor(personIds: number[]): Slot[] {
       personId: picks.personId,
       classId: classes.id,
       courseCode: courses.code,
-      courseTitle: courses.title,
+      courseTitle: picks.courseTitle,
       activity: classes.activity,
       group: classes.group,
       day: meetings.day,

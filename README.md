@@ -17,9 +17,9 @@ seeded catalogue could never offer a friend a different tute. Instead the
 catalogue builds itself from people's imports. Two friends who both import
 COMP4020 TutA 04 hold the same class, and that is exactly what "you share a
 tute" means. It's a match on a real row, not a guess from course codes and
-times. Only the class's identity is shared, though. When it meets is each
-person's own, taken from their export, so nobody's import can move a class
-in anyone else's week.
+times. Only the class's identity is shared, though. When it meets, and what the
+course is called, are each person's own, taken from their export, so
+nobody's import can move or rename a class in anyone else's week.
 
 **The schema follows Allocate+, not my assumptions.** My first schema keyed
 classes on a made-up kind (lecture, tutorial, lab). The real export has
@@ -61,5 +61,4 @@ Whether the grid is actually readable, and whether this beats a group chat,
 is for a person to judge.
 
 **What it doesn't do.** Lose the cookie on every device a timetable is linked
-to, and the timetable is gone, since there's nothing else to prove it's yours. Course codes are assumed to mean this semester, and a course's title is
-whatever the first person to import it had in their export.
+to, and the timetable is gone, since there's nothing else to prove it's yours. Course codes are assumed to mean this semester.

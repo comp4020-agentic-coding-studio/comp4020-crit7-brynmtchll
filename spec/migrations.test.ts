@@ -58,7 +58,7 @@ describe("migrating the live database", () => {
     const before = openDatabase(path, migrationsWith());
     before.client.exec(`
       insert into people (name, share_code) values ('Holder', 'HOLDER');
-      insert into courses values ('COMP4020', 'Agentic Coding Studio');
+      insert into courses values ('COMP4020');
       insert into classes (course_code, activity, "group") values ('COMP4020', 'TutA', '04');
       insert into meetings (class_id, person_id, day, start, end, room) values (1, 1, 3, 630, 720, null);
       insert into occurrences values (1, '2026-09-30'), (1, '2026-10-07');
@@ -120,6 +120,27 @@ describe("migrating the live database", () => {
       { person_id: 2, date: "2026-09-30" },
       { person_id: 2, date: "2026-10-07" },
     ]);
+    after.client.close();
+  });
+
+  it("gives every existing pick its course's title before the shared title goes", () => {
+    const path = join(mkdtempSync(join(tmpdir(), "db-")), "app.db");
+    const before = openDatabase(path, migrationsWith([], "0005_meetings_per_person"));
+    before.client.exec(`
+      insert into people (name, share_code) values ('Ada', 'ADA222'), ('Bo', 'BO3333');
+      insert into courses values ('COMP4020', 'Agentic Coding Studio'), ('COMP3320', 'HPC');
+      insert into classes (course_code, activity, "group") values ('COMP4020', 'TutA', '04'), ('COMP3320', 'LecA', '01');
+      insert into picks values (1, 1), (2, 1), (2, 2);
+    `);
+    before.client.close();
+
+    const after = openDatabase(path, migrationsWith());
+    expect(rows(after.client, "select person_id, class_id, course_title from picks order by person_id, class_id")).toEqual([
+      { person_id: 1, class_id: 1, course_title: "Agentic Coding Studio" },
+      { person_id: 2, class_id: 1, course_title: "Agentic Coding Studio" },
+      { person_id: 2, class_id: 2, course_title: "HPC" },
+    ]);
+    expect(rows(after.client, "select * from courses order by code")).toEqual([{ code: "COMP3320" }, { code: "COMP4020" }]);
     after.client.close();
   });
 });

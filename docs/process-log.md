@@ -249,3 +249,25 @@ Screenshots, not tests, drove this:
 Deployed after reading the new migrations' SQL for `DROP TABLE` (none). All
 CI probes pass live, and the link check is clean.
 
+## 17. Meetings become each person's own
+
+The design from entry 7 had a hole I'd written down as a "limitation": the
+newest import of a class set its meetings for everyone holding it, so anyone
+could import a crafted file and move a real tute in every friend's overlay.
+Entry 12's test race was the same flaw showing. Class identity stays shared;
+meetings and dates now belong to the importer. [`34111b8`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/34111b8)
+
+drizzle-kit's generated migration (`ADD person_id integer NOT NULL`) passes
+on an empty table and is refused on a volume with rows, so it would have
+passed CI and crashed the deploy at boot. It had also dropped the cascade.
+Wrote `0005` by hand as a rebuild that fans each shared meeting out per
+person, and a test from the `0004` state with data, which failed on the
+generated SQL first. `weeks.test.ts` now deliberately imports another file's
+class with different dates, and a stranger-import test fails if the query
+goes back to joining meetings by class alone.
+
+Deployed after reviewing `0005`'s intended `DROP TABLE`s; all probes pass.
+
+Writing the new harness rule ("never let one person's import write rows
+another person's view reads") exposed that `courses.title` still breaks it.
+

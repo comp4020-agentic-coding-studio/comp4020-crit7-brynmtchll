@@ -22,9 +22,11 @@ import {
 // on the same class row, and that shared row is what "you share a tute"
 // means.
 
+// Just the code: a course's title comes from each person's own export (on
+// picks), since a shared title would be whatever the first importer's file
+// said, for everyone.
 export const courses = sqliteTable("courses", {
   code: text().primaryKey(), // "COMP4020"
-  title: text().notNull(),
 });
 
 // One bookable group, the unit MyTimetable (Allocate+) allocates you to. The
@@ -148,6 +150,9 @@ export const picks = sqliteTable(
     classId: int("class_id")
       .notNull()
       .references(() => classes.id, { onDelete: "cascade" }),
+    // as this person's export names the course; the default exists only so
+    // the column could be added to a table that already had rows
+    courseTitle: text("course_title").notNull().default(""),
   },
   (t) => [primaryKey({ columns: [t.personId, t.classId] })],
 );
