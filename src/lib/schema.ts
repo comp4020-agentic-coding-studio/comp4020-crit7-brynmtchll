@@ -15,17 +15,22 @@ import {
 // by hand: state on the deployed volume outlives every deploy, and the
 // migration trail is what keeps old state and new code compatible.
 
-// --- the catalogue: what ANU timetables, seeded by migration ---------------
+// --- the catalogue: what ANU timetables -------------------------------------
+//
+// Nobody seeds this. It grows from the MyTimetable exports people import
+// (src/lib/ical.ts), so two friends who both import "COMP4020 TutA 04" land
+// on the same class row, and that shared row is what "you share a tute"
+// means.
 
 export const courses = sqliteTable("courses", {
   code: text().primaryKey(), // "COMP4020"
   title: text().notNull(),
 });
 
-// One bookable group, the unit MyTimetable (Allocate+) allocates you to:
-// "COMP4020 Tutorial 03". A student holds one group per course and kind.
-export const CLASS_KINDS = ["Lecture", "Tutorial", "Lab", "Workshop"] as const;
-
+// One bookable group, the unit MyTimetable (Allocate+) allocates you to. The
+// activity is Allocate+'s own code, not a kind: a course can run LecA and
+// LecB as separate activities, each with its own group 01, and a student
+// holds one group per activity.
 export const classes = sqliteTable(
   "classes",
   {
@@ -33,16 +38,18 @@ export const classes = sqliteTable(
     courseCode: text("course_code")
       .notNull()
       .references(() => courses.code),
-    kind: text({ enum: CLASS_KINDS }).notNull(),
-    group: text().notNull(), // "01"
+    activity: text().notNull(), // "TutA"
+    group: text().notNull(), // "04"
   },
-  (t) => [uniqueIndex("classes_course_kind_group").on(t.courseCode, t.kind, t.group)],
+  (t) => [uniqueIndex("classes_course_activity_group").on(t.courseCode, t.activity, t.group)],
 );
 
 // When a class meets. Its own table because one group can meet more than
-// once a week (a lecture on Monday and Wednesday). Times are minutes after
-// midnight, Canberra time, so overlap and free-time arithmetic is integer
-// comparison rather than string parsing.
+// once a week, and because Allocate+ splits some groups into parts (a lab
+// "02-P1" 13:00–14:30 then its drop-in "02-P2" 14:30–15:00), which are two
+// meetings of one class. Times are minutes after midnight, Canberra time, so
+// overlap and free-time arithmetic is integer comparison rather than string
+// parsing. A null room is a class with no room (Allocate+ says "NA").
 export const meetings = sqliteTable(
   "meetings",
   {
@@ -53,9 +60,11 @@ export const meetings = sqliteTable(
     day: int().notNull(), // 1 = Monday … 5 = Friday
     start: int().notNull(),
     end: int().notNull(),
-    room: text().notNull(),
+    room: text(),
   },
   (t) => [
+    // re-importing a class someone else already brought in is a no-op
+    uniqueIndex("meetings_class_slot").on(t.classId, t.day, t.start, t.end),
     check("meetings_weekday", sql`${t.day} between 1 and 5`),
     check("meetings_ordered", sql`${t.start} >= 0 and ${t.start} < ${t.end} and ${t.end} <= 1440`),
   ],
@@ -76,9 +85,10 @@ export const people = sqliteTable("people", {
     .default(sql`(datetime('now'))`),
 });
 
-// The classes a person has chosen. "One group per course and kind" is
-// enforced where picks are written (src/lib/db.ts), which swaps the old
-// group for the new one in a single transaction.
+// The classes in a person's timetable. An import replaces them wholesale in
+// one transaction (src/lib/timetable.ts): a MyTimetable export already holds
+// exactly one group per activity, so the export is the source of truth and
+// re-importing is how you pick up a changed allocation.
 export const picks = sqliteTable(
   "picks",
   {

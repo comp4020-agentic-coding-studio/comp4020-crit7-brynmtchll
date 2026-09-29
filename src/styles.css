@@ -62,3 +62,28 @@ button {
 .friends form {
   margin: 0;
 }
+
+form.stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+textarea {
+  padding: 0.4rem 0.6rem;
+  font: 0.85rem ui-monospace, monospace;
+}
+
+.classes {
+  list-style: none;
+  padding: 0;
+}
+
+.classes .when {
+  display: inline-block;
+  min-width: 8.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.classes .room {
+  color: #555;
+}

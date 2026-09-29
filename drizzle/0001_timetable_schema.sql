@@ -1,12 +1,12 @@
 CREATE TABLE `classes` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`course_code` text NOT NULL,
-	`kind` text NOT NULL,
+	`activity` text NOT NULL,
 	`group` text NOT NULL,
 	FOREIGN KEY (`course_code`) REFERENCES `courses`(`code`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `classes_course_kind_group` ON `classes` (`course_code`,`kind`,`group`);--> statement-breakpoint
+CREATE UNIQUE INDEX `classes_course_activity_group` ON `classes` (`course_code`,`activity`,`group`);--> statement-breakpoint
 CREATE TABLE `courses` (
 	`code` text PRIMARY KEY NOT NULL,
 	`title` text NOT NULL
@@ -28,12 +28,13 @@ CREATE TABLE `meetings` (
 	`day` integer NOT NULL,
 	`start` integer NOT NULL,
 	`end` integer NOT NULL,
-	`room` text NOT NULL,
+	`room` text,
 	FOREIGN KEY (`class_id`) REFERENCES `classes`(`id`) ON UPDATE no action ON DELETE cascade,
 	CONSTRAINT "meetings_weekday" CHECK("meetings"."day" between 1 and 5),
 	CONSTRAINT "meetings_ordered" CHECK("meetings"."start" >= 0 and "meetings"."start" < "meetings"."end" and "meetings"."end" <= 1440)
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX `meetings_class_slot` ON `meetings` (`class_id`,`day`,`start`,`end`);--> statement-breakpoint
 CREATE TABLE `people` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,

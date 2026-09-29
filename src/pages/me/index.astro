@@ -2,17 +2,39 @@
 import Base from "../../layouts/Base.astro";
 import { type FollowResult, friendsOf } from "../../lib/friends";
 import { currentPerson } from "../../lib/people";
+import { DAYS, activityLabel, clock, slotsFor } from "../../lib/timetable";
 
 const me = currentPerson(Astro.cookies);
 const friends = me ? friendsOf(me) : [];
+const slots = me ? slotsFor([me.id]) : [];
+
+const params = Astro.url.searchParams;
 
 const FOLLOW_MESSAGES: Record<FollowResult, string> = {
   added: "Friend added. They're on your overlay now.",
   unknown: "No timetable has that code. Check it with your friend.",
   self: "That's your own code.",
 };
-const outcome = Astro.url.searchParams.get("friend") as FollowResult | null;
-const message = outcome ? FOLLOW_MESSAGES[outcome] : undefined;
+const followOutcome = params.get("friend") as FollowResult | null;
+const followMessage = followOutcome ? FOLLOW_MESSAGES[followOutcome] : undefined;
+
+const importMessage = (() => {
+  switch (params.get("import")) {
+    case "ok": {
+      const skipped = Number(params.get("skipped"));
+      return (
+        `Imported ${params.get("classes")} weekly classes.` +
+        (skipped > 0 ? ` Skipped ${skipped} one-off sessions (assessments and the like).` : "")
+      );
+    }
+    case "empty":
+      return "No classes found in that. It should be the .ics file MyTimetable exports.";
+    case "too-big":
+      return "That file is far bigger than a timetable export.";
+    default:
+      return undefined;
+  }
+})();
 ---
 
 <Base title="My timetable">
@@ -28,9 +50,49 @@ const message = outcome ? FOLLOW_MESSAGES[outcome] : undefined;
           </p>
         </section>
 
+        <section id="timetable" aria-labelledby="timetable-heading">
+          <h2 id="timetable-heading">Your classes</h2>
+          {params.get("import") === "ok" && <p role="status">{importMessage}</p>}
+          {slots.length === 0 ? (
+            <p>Nothing yet. Import your MyTimetable export below.</p>
+          ) : (
+            <ul class="classes">
+              {slots.map((s) => (
+                <li>
+                  <span class="when">
+                    {DAYS[s.day - 1]} {clock(s.start)}–{clock(s.end)}
+                  </span>{" "}
+                  <strong>{s.courseCode}</strong> {activityLabel(s.activity)} {s.group}
+                  {s.room && <span class="room"> · {s.room}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section id="import" aria-labelledby="import-heading">
+          <h2 id="import-heading">Import from MyTimetable</h2>
+          <p>
+            In MyTimetable, export your timetable as a calendar (.ics) and upload it here, or
+            paste its contents. Importing again replaces your classes, so do it whenever your
+            allocation changes.
+          </p>
+          {importMessage && params.get("import") !== "ok" && (
+            <p role="alert">{importMessage}</p>
+          )}
+          <form method="post" action="/api/import" enctype="multipart/form-data" class="stacked">
+            <label for="ics">Calendar file</label>
+            <input id="ics" name="ics" type="file" accept=".ics,text/calendar" />
+            <label for="pasted">…or paste it</label>
+            <textarea id="pasted" name="pasted" rows="4" spellcheck="false"
+              placeholder="BEGIN:VCALENDAR"></textarea>
+            <button>Import</button>
+          </form>
+        </section>
+
         <section id="friends" aria-labelledby="friends-heading">
           <h2 id="friends-heading">Friends</h2>
-          {message && <p role="status">{message}</p>}
+          {followMessage && <p role="status">{followMessage}</p>}
           <form method="post" action="/api/friends">
             <label for="code">Add a friend by their share code</label>
             <input

@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "52777f36-7047-473b-9c87-65fbad9f20a0",
-  "prevId": "10266dad-113a-460a-b677-327ff3ee78dd",
+  "id": "4d292d96-b513-4a7c-a15a-0842093c5d50",
+  "prevId": "3eb38769-d620-4f6f-8ba9-b3bb3c54676e",
   "tables": {
     "classes": {
       "name": "classes",
@@ -21,8 +21,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "kind": {
-          "name": "kind",
+        "activity": {
+          "name": "activity",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -37,11 +37,11 @@
         }
       },
       "indexes": {
-        "classes_course_kind_group": {
-          "name": "classes_course_kind_group",
+        "classes_course_activity_group": {
+          "name": "classes_course_activity_group",
           "columns": [
             "course_code",
-            "kind",
+            "activity",
             "group"
           ],
           "isUnique": true
@@ -204,11 +204,22 @@
           "name": "room",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "meetings_class_slot": {
+          "name": "meetings_class_slot",
+          "columns": [
+            "class_id",
+            "day",
+            "start",
+            "end"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "meetings_class_id_classes_id_fk": {
           "name": "meetings_class_id_classes_id_fk",
