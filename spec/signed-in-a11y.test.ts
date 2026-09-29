@@ -25,7 +25,9 @@ beforeAll(async () => {
   await importCalendar(me, myTimetable([...tute, ...clash]));
   await importCalendar(friend, myTimetable(tute));
   await post("/api/friends", new URLSearchParams({ code: friend.shareCode }), me.cookie);
-  for (const path of ["/me/", "/overlay/"]) pages.set(path, await page(path, me.cookie));
+  // the overlay pinned to a week the fixtures' dates fall in
+  pages.set("/me/", await page("/me/", me.cookie));
+  pages.set("/overlay/", await page("/overlay/?week=2026-09-28", me.cookie));
 });
 
 for (const path of ["/me/", "/overlay/"]) {

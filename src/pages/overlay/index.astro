@@ -1,11 +1,12 @@
 ---
 import Base from "../../layouts/Base.astro";
+import { ISO_DATE, addDays, canberraNow, formatDate, mondayOf } from "../../lib/dates";
 import { friendsOf } from "../../lib/friends";
 import {
   COLOURS,
   FREE_WINDOW,
-  canberraNow,
   freeTogether,
+  inWeek,
   placeOnGrid,
   sharedWith,
   statusAt,
@@ -27,19 +28,41 @@ const shownIds = shown.map((p) => p.id);
 const colour = new Map(everyone.map((p, i) => [p.id, COLOURS[i % COLOURS.length]]));
 const nameOf = new Map(everyone.map((p) => [p.id, p.id === me?.id ? "You" : p.name]));
 
-const slots = slotsFor(everyone.map((p) => p.id));
-const hasTimetable = new Set(slots.map((s) => s.personId));
-const grid = placeOnGrid(
-  slots.filter((s) => shownIds.includes(s.personId)),
-  shownIds,
-);
-const shared = me ? sharedWith(slots, me.id, shownIds) : [];
-const free = shownIds.length >= 2 ? freeTogether(slots, shownIds) : [];
-const freeByDay = DAYS.map((_, i) => free.filter((g) => g.day === i + 1));
-const pct = (minutes: number): number => ((minutes - grid.from) / (grid.to - grid.from)) * 100;
+// Which week the grid shows: ?week= snaps to its Monday. Otherwise it's
+// this week, or next week once this one's teaching days are over.
 const now = canberraNow();
 const isWeekday = now.day <= 5;
-const nowLine = isWeekday && now.minutes >= grid.from && now.minutes <= grid.to ? pct(now.minutes) : undefined;
+const thisMonday = mondayOf(now.date);
+const requested = params.get("week");
+const monday =
+  requested && ISO_DATE.test(requested)
+    ? mondayOf(requested)
+    : isWeekday
+      ? thisMonday
+      : addDays(thisMonday, 7);
+const isThisWeek = monday === thisMonday;
+const weekLink = (target: string): string => {
+  const next = new URLSearchParams(params);
+  next.set("week", target);
+  return `?${next}`;
+};
+
+const slots = slotsFor(everyone.map((p) => p.id));
+const hasTimetable = new Set(slots.map((s) => s.personId));
+const weekSlots = inWeek(
+  slots.filter((s) => shownIds.includes(s.personId)),
+  monday,
+);
+const grid = placeOnGrid(weekSlots, shownIds);
+const shared = me ? sharedWith(slots, me.id, shownIds) : [];
+const free = shownIds.length >= 2 ? freeTogether(weekSlots, shownIds) : [];
+const freeByDay = DAYS.map((_, i) => free.filter((g) => g.day === i + 1));
+const pct = (minutes: number): number => ((minutes - grid.from) / (grid.to - grid.from)) * 100;
+const nowLine =
+  isThisWeek && isWeekday && now.minutes >= grid.from && now.minutes <= grid.to
+    ? pct(now.minutes)
+    : undefined;
+const weekIsEmpty = weekSlots.length === 0 && slots.some((s) => shownIds.includes(s.personId));
 const where = (s: { courseCode: string; activity: string; room: string | null }): string =>
   `${s.courseCode} ${activityLabel(s.activity)}${s.room ? ` (${s.room})` : ""}`;
 const sharedIds = new Set(shared.map((c) => c.classId));
@@ -63,6 +86,7 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
       <>
         <form method="get" class="people" id="people" data-watch={everyone.map((p) => p.id).join(" ")}>
           <input type="hidden" name="filtered" value="1" />
+          {requested && <input type="hidden" name="week" value={monday} />}
           <fieldset>
             <legend>Show</legend>
             {everyone.map((p) => (
@@ -104,19 +128,35 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
                         ? `${verb} free until ${clock(status.next.start)}, then ${where(status.next)}`
                         : status.state === "done"
                           ? `${p.id === me.id ? "are" : "is"} done for the day`
-                          : `${p.id === me.id ? "have" : "has"} no classes today`}
+                          : status.state === "off"
+                            ? `${p.id === me.id ? "have" : "has"} no classes today: the usual ${DAYS[now.day - 1]} classes aren't on (a public holiday or the teaching break)`
+                            : `${p.id === me.id ? "have" : "has"} no classes today`}
                   </li>
                 );
               })}
             </ul>
           )}
-          <p class="muted small">
-            Going by the weekly timetable, so teaching breaks and public holidays look like normal weeks.
-          </p>
+
         </section>
 
         <section aria-labelledby="week-heading" class="week-wrap">
-          <h2 id="week-heading">This week</h2>
+          <div class="week-head">
+            <h2 id="week-heading">
+              Week of {formatDate(monday)}
+              {isThisWeek && <span class="muted"> · this week</span>}
+            </h2>
+            <nav aria-label="Weeks" class="week-nav">
+              <a href={weekLink(addDays(monday, -7))}>← Previous week</a>
+              {!isThisWeek && <a href={weekLink(thisMonday)}>This week</a>}
+              <a href={weekLink(addDays(monday, 7))}>Next week →</a>
+            </nav>
+          </div>
+          {weekIsEmpty && (
+            <p role="status">
+              Nobody shown has classes this week. Their exports say nothing runs, so it's the
+              teaching break or outside semester.
+            </p>
+          )}
           <div
             class="week"
             style={`--hours: ${(grid.to - grid.from) / 60}`}
@@ -130,7 +170,9 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
             </div>
             {grid.days.map((blocks, i) => (
               <section class="day" aria-labelledby={`day-${i}`}>
-                <h3 id={`day-${i}`}>{DAYS[i]}</h3>
+                <h3 id={`day-${i}`}>
+                  {DAYS[i]} <span class="date">{formatDate(addDays(monday, i)).split(" ")[1]}</span>
+                </h3>
                 <div class="day-body">
                   {nowLine !== undefined && i === now.day - 1 && (
                     <div class="now" aria-hidden="true" style={`top: ${nowLine}%`} />
@@ -180,7 +222,8 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
             <>
               <p>
                 When {list(shownIds)} are all out of class between {clock(FREE_WINDOW.start)} and{" "}
-                {clock(FREE_WINDOW.end)}. It's shaded green on the grid.
+                {clock(FREE_WINDOW.end)} in the week of {formatDate(monday)}. It's shaded green on
+                the grid.
               </p>
               <ul class="free-list">
                 {DAYS.map((day, i) => (
@@ -207,7 +250,13 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
               {shared.map((c) => (
                 <li>
                   <strong>{c.courseCode}</strong> {activityLabel(c.activity)} {c.group},{" "}
-                  {c.meetings.map((m) => `${DAYS[m.day - 1]} ${clock(m.start)}–${clock(m.end)}`).join(" and ")}{" "}
+                  {c.meetings
+                    .map((m) =>
+                      m.dates.length === 1
+                        ? `${formatDate(m.dates[0])} ${clock(m.start)}–${clock(m.end)}`
+                        : `${DAYS[m.day - 1]} ${clock(m.start)}–${clock(m.end)}`,
+                    )
+                    .join(" and ")}{" "}
                   with {list(c.friends)}
                   {c.meetings[0].room && <span class="room"> · {c.meetings[0].room}</span>}
                 </li>

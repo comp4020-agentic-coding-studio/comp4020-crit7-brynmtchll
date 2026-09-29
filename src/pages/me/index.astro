@@ -2,11 +2,16 @@
 import Base from "../../layouts/Base.astro";
 import { type FollowResult, friendsOf } from "../../lib/friends";
 import { currentPerson } from "../../lib/people";
-import { DAYS, activityLabel, clock, slotsFor } from "../../lib/timetable";
+import { formatDate } from "../../lib/dates";
+import { DAYS, activityLabel, clock, isOneOff, slotsFor } from "../../lib/timetable";
 
 const me = currentPerson(Astro.cookies);
 const friends = me ? friendsOf(me) : [];
 const slots = me ? slotsFor([me.id]) : [];
+const weekly = slots.filter((s) => !isOneOff(s));
+const oneOffs = slots
+  .filter(isOneOff)
+  .sort((a, b) => a.dates[0].localeCompare(b.dates[0]) || a.start - b.start);
 
 const params = Astro.url.searchParams;
 
@@ -23,8 +28,8 @@ const importMessage = (() => {
     case "ok": {
       const skipped = Number(params.get("skipped"));
       return (
-        `Imported ${params.get("classes")} weekly classes.` +
-        (skipped > 0 ? ` Skipped ${skipped} one-off sessions (assessments and the like).` : "")
+        `Imported ${params.get("classes")} classes.` +
+        (skipped > 0 ? ` Skipped ${skipped} weekend sessions.` : "")
       );
     }
     case "empty":
@@ -57,7 +62,7 @@ const importMessage = (() => {
             <p>Nothing yet. Import your MyTimetable export below.</p>
           ) : (
             <ul class="classes">
-              {slots.map((s) => (
+              {weekly.map((s) => (
                 <li>
                   <span class="when">
                     {DAYS[s.day - 1]} {clock(s.start)}–{clock(s.end)}
@@ -67,6 +72,22 @@ const importMessage = (() => {
                 </li>
               ))}
             </ul>
+          )}
+          {oneOffs.length > 0 && (
+            <>
+              <h3>One-off sessions</h3>
+              <ul class="classes">
+                {oneOffs.map((s) => (
+                  <li>
+                    <span class="when">
+                      {formatDate(s.dates[0])} {clock(s.start)}–{clock(s.end)}
+                    </span>{" "}
+                    <strong>{s.courseCode}</strong> {activityLabel(s.activity)} {s.group}
+                    {s.room && <span class="room"> · {s.room}</span>}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </section>
 

@@ -1,4 +1,5 @@
-import type { Slot } from "./timetable";
+import { type Moment, addDays } from "./dates";
+import { type Slot, isOneOff, occursOn } from "./timetable";
 
 // Where each class sits on the week grid. Every person shown gets their own
 // lane in each day column, always in the same order, so a gap running
@@ -74,7 +75,7 @@ export type SharedClass = {
   courseCode: string;
   activity: string;
   group: string;
-  meetings: { day: number; start: number; end: number; room: string | null }[];
+  meetings: { day: number; start: number; end: number; room: string | null; dates: string[] }[];
   friends: number[]; // who you share it with, in overlay order
 };
 
@@ -92,12 +93,20 @@ export function sharedWith(slots: Slot[], me: number, people: number[]): SharedC
     const holders = new Set(rows.map((r) => r.personId));
     if (!holders.has(me) || holders.size < 2) continue;
     const mine = rows.filter((r) => r.personId === me);
+    // a class's weekly meetings describe it; its one-offs only if that's all it has
+    const recurring = mine.filter((r) => !isOneOff(r));
     shared.push({
       classId,
       courseCode: mine[0].courseCode,
       activity: mine[0].activity,
       group: mine[0].group,
-      meetings: mine.map(({ day, start, end, room }) => ({ day, start, end, room })),
+      meetings: (recurring.length > 0 ? recurring : mine).map(({ day, start, end, room, dates }) => ({
+        day,
+        start,
+        end,
+        room,
+        dates,
+      })),
       friends: people.filter((p) => p !== me && holders.has(p)),
     });
   }
@@ -133,40 +142,25 @@ export function freeTogether(slots: Slot[], people: number[]): Gap[] {
   return gaps;
 }
 
-export type Moment = { day: number; minutes: number }; // day 1 = Monday … 7 = Sunday
-
-// The clock the app runs on is the campus's, not the server's (Fly runs in
-// UTC): "now" is always Canberra time.
-export function canberraNow(at: Date = new Date()): Moment {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-AU", {
-      timeZone: "Australia/Canberra",
-      weekday: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    })
-      .formatToParts(at)
-      .map((p) => [p.type, p.value]),
-  );
-  const day = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(parts.weekday) + 1;
-  return { day, minutes: Number(parts.hour) * 60 + Number(parts.minute) };
+// The meetings that actually happen in the week starting on a Monday.
+export function inWeek(slots: Slot[], monday: string): Slot[] {
+  return slots.filter((s) => occursOn(s, addDays(monday, s.day - 1)));
 }
 
 export type Status =
   | { state: "in-class"; slot: Slot }
   | { state: "free"; next: Slot }
   | { state: "done" } // had classes today, all finished
-  | { state: "none" }; // no classes today
+  | { state: "off" } // usually has classes on this weekday, but none today
+  | { state: "none" }; // no classes on this weekday at all
 
-// Where one person is at a moment in the weekly timetable. It knows the
-// week's shape, not the calendar, so teaching breaks and public holidays
-// still read as a normal week.
+// Where one person is at a moment, going by the dates their classes actually
+// run: on a public holiday or in the teaching break, their usual Monday is
+// "off", not a normal day.
 export function statusAt(slots: Slot[], personId: number, now: Moment): Status {
-  const today = slots
-    .filter((s) => s.personId === personId && s.day === now.day)
-    .sort((a, b) => a.start - b.start);
-  if (today.length === 0) return { state: "none" };
+  const usual = slots.filter((s) => s.personId === personId && s.day === now.day);
+  const today = usual.filter((s) => occursOn(s, now.date)).sort((a, b) => a.start - b.start);
+  if (today.length === 0) return usual.some((s) => s.dates.length > 1) ? { state: "off" } : { state: "none" };
   const current = today.find((s) => s.start <= now.minutes && now.minutes < s.end);
   if (current) return { state: "in-class", slot: current };
   const next = today.find((s) => s.start > now.minutes);

@@ -22,6 +22,13 @@
       "when": 1790646613732,
       "tag": "0002_drop_guestbook",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790648278831,
+      "tag": "0003_dated_occurrences",
+      "breakpoints": true
     }
   ]
 }

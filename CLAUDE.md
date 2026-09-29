@@ -49,8 +49,11 @@ first schema wrong, so hold these:
   derived for display, never a key.
 - `02-P1` and `02-P2` are two parts of group `02`: one class, two meetings.
 - A room can be absent (`NA`), so it's null.
-- A weekly meeting is a slot seen at least twice. One-offs (in-class
-  assessments) are skipped and counted, not guessed at.
+- **Keep the dates.** A slot doesn't run every week: the export leaves out the
+  teaching break and public holidays (no Monday lecture on Labour Day), and a
+  one-off session is a meeting with a single date. "This week" and "right
+  now" go by `occurrences`, never by the weekly shape alone. A meeting with no
+  dates predates the table and is read as weekly.
 
 **Never commit a personal export.** The repo goes public at the cutoff.
 Fixtures use COMP4020's classes (every student in the course has them) or
@@ -228,8 +231,10 @@ rest, so a broken build hides every spec result behind it.
     (spec line 3)
   - `overlay`: a friend added by code is on the grid, "shared" means the same
     group, and the free-time gaps are right
-  - `now`: status at fixed moments, and Canberra time across the
-    daylight-saving change
+  - `now`: status at fixed moments (including Labour Day), week filtering,
+    and Canberra time across the daylight-saving change
+  - `weeks`: the grid draws a real week, leaves out skipped classes, and
+    shows one-offs only in their own week
   - `live`: an import is announced on the stream, and only by id
   - `signed-in-a11y`: the axe floor on `/me/` and `/overlay/` with data on them
 - **evidence** (`pnpm check:evidence`): the submission gate.
@@ -269,6 +274,11 @@ accessibility. Nothing measures performance.
   403s in production.
 - **Add every new page to `spec/routes.ts`**, or the invariants silently stop
   covering it. If it matters signed in, add it to `signed-in-a11y` too.
+- **Tests share one server, so they share the catalogue.** The newest import
+  of a class sets its dates for everyone, so two test files importing the same
+  class with different dates race. Give a test file its own course codes when
+  its dates differ, and pin `?week=` on any overlay request, since the grid
+  defaults to the real current week.
 - **There's no base path.** The app is served from the root of its `fly.dev`
   host, so root-absolute links (`href="/me/"`) are correct here. This inverts
   A2's rule, where the platform derived `base` and a root-absolute link

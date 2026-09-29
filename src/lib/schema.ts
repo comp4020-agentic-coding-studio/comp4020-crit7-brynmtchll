@@ -70,6 +70,25 @@ export const meetings = sqliteTable(
   ],
 );
 
+// The dates a meeting actually happens, straight from the export. A weekly
+// slot doesn't run every week: the export leaves out the teaching break and
+// public holidays (no COMP3320 lecture on Labour Day), and a one-off session
+// is a meeting with a single date. A meeting with no dates at all was
+// imported before dates were kept, and is read as running every week.
+export const occurrences = sqliteTable(
+  "occurrences",
+  {
+    meetingId: int("meeting_id")
+      .notNull()
+      .references(() => meetings.id, { onDelete: "cascade" }),
+    date: text().notNull(), // "2026-10-05", Canberra's calendar
+  },
+  (t) => [
+    primaryKey({ columns: [t.meetingId, t.date] }),
+    check("occurrences_iso_date", sql`${t.date} glob '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'`),
+  ],
+);
+
 // --- people: the state users create -----------------------------------------
 
 // No accounts. The share code is public (give it to a friend to be

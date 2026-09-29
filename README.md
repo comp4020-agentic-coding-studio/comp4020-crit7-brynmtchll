@@ -24,9 +24,11 @@ classes on a made-up kind (lecture, tutorial, lab). The real export has
 COMP3320 running LecA and LecB as separate activities, each group 01, and
 labs split into parts (a lab, then its drop-in half an hour later). Classes
 now key on Allocate+'s own activity code, and one class can meet several
-times a week. A weekly class is a time slot that repeats. Sessions that
-happen once, like in-class assessments, are skipped and counted, not guessed
-at.
+times a week. The export's dates are kept too, since they already know
+which weeks a class doesn't run. There's no Monday lecture on Labour Day, and
+nothing at all in the teaching break, so the grid shows a real week and
+"right now" knows when a usual class isn't on. An in-class assessment is just
+a session with a single date, and appears in the week it happens.
 
 **No accounts.** A timetable is a name and a secret cookie. Friends are added
 by a six-character share code, and knowing someone's code is permission to
@@ -47,7 +49,6 @@ Whether the grid is actually readable, and whether this beats a group chat,
 is for a person to judge.
 
 **What it doesn't do.** Lose your cookie and you lose your timetable. There's
-no way to delete one. "Right now" goes by the shape of a week, so teaching
-breaks and public holidays look like normal weeks. The catalogue trusts
+no way to delete one. The catalogue trusts
 imports: the newest export of a class decides when that class meets for
 everyone who holds it. Course codes are assumed to mean this semester.

@@ -5,6 +5,12 @@ import { type Visitor, importCalendar, makeTimetable, page, post } from "./http"
 // The overlay's promises, driven over HTTP against the running app: a friend
 // added by code is on your grid on the next page load, and "you share a
 // class" means the same Allocate+ group, not merely the same course.
+//
+// Every request pins the week: the grid defaults to the real current week,
+// and the fixtures' dates are in late September 2026, so an unpinned test
+// would pass on the day it was written and fail a week later.
+const WEEK = "week=2026-09-28";
+const OVERLAY = `/overlay/?${WEEK}`;
 
 const COMP4020 = { course: "COMP4020", title: "Agentic Coding Studio" };
 const lecture = weekly({ ...COMP4020, activity: "LecA", group: "01", start: "1100", end: "1300" }, WEEKS.thu);
@@ -32,7 +38,7 @@ beforeAll(async () => {
 });
 
 // the "Classes you share" section's list items, as text
-async function sharedClasses(path = "/overlay/"): Promise<string[]> {
+async function sharedClasses(path = OVERLAY): Promise<string[]> {
   const html = await page(path, me.cookie);
   const section = html.split('id="shared-heading"')[1] ?? "";
   return [...section.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) =>
@@ -42,7 +48,7 @@ async function sharedClasses(path = "/overlay/"): Promise<string[]> {
 
 describe("the overlay", () => {
   it("puts a friend's classes on your grid once you add their code", async () => {
-    const html = await page("/overlay/", me.cookie);
+    const html = await page(OVERLAY, me.cookie);
     expect(html).toContain("COMP2100"); // only Sam takes it
   });
 
@@ -56,15 +62,15 @@ describe("the overlay", () => {
   });
 
   it("drops a friend from the grid when they're toggled off", async () => {
-    const html = await page("/overlay/", me.cookie);
+    const html = await page(OVERLAY, me.cookie);
     const ids = Object.fromEntries(
       [...html.matchAll(/value="(\d+)"[^>]*>\s*(You|Sam|Alex)/g)].map((m) => [m[2], m[1]]),
     );
     expect(Object.keys(ids).sort()).toEqual(["Alex", "Sam", "You"]);
-    const onlyAlex = await page(`/overlay/?filtered=1&show=${ids.You}&show=${ids.Alex}`, me.cookie);
+    const onlyAlex = await page(`${OVERLAY}&filtered=1&show=${ids.You}&show=${ids.Alex}`, me.cookie);
     expect(onlyAlex).toContain('class="who">Alex');
     expect(onlyAlex).not.toContain("COMP2100");
-    const shared = await sharedClasses(`/overlay/?filtered=1&show=${ids.You}&show=${ids.Alex}`);
+    const shared = await sharedClasses(`${OVERLAY}&filtered=1&show=${ids.You}&show=${ids.Alex}`);
     expect(shared.some((line) => line.includes("Tutorial 04"))).toBe(false);
   });
 });
@@ -72,7 +78,7 @@ describe("the overlay", () => {
 describe("free together", () => {
   // the "Free together" list, one line per weekday
   async function freeTimes(): Promise<Record<string, string>> {
-    const html = await page("/overlay/", me.cookie);
+    const html = await page(OVERLAY, me.cookie);
     const section = html.split('id="free-heading"')[1]?.split("</section>")[0] ?? "";
     return Object.fromEntries(
       [...section.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) => {

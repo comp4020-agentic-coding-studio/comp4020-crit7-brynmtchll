@@ -290,3 +290,21 @@ nav {
   border-radius: 50%;
   background: #d12b2b;
 }
+
+.week-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+}
+
+.week-nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.day h3 .date {
+  font-weight: 400;
+  color: #555;
+}

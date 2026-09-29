@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { parseMyTimetable } from "../src/lib/ical";
 import { WEEKS, myTimetable, weekly } from "./fixtures/mytimetable";
 
-// The import reads a real MyTimetable export back into a weekly timetable.
-// These pin the export's quirks, each first seen in a real file: labs split
-// into parts, a course running LecA and LecB as separate activities, one-off
-// assessment sessions, and classes with no room.
+// The import reads a real MyTimetable export into classes, their meetings,
+// and the dates each meeting runs. These pin the export's quirks, each first
+// seen in a real file: labs split into parts, a course running LecA and LecB
+// as separate activities, one-off assessment sessions, weeks a class skips
+// (the teaching break, Labour Day), and classes with no room.
 
 // Verbatim from a real export (COMP4020's classes only), escapes and all.
 const REAL_EXCERPT = `BEGIN:VCALENDAR
@@ -63,14 +64,22 @@ describe("parseMyTimetable", () => {
         courseTitle: "Advanced Topics in Human-Centr_Agentic Coding Studio",
         activity: "LecA",
         group: "01_Clone",
-        meetings: [{ day: 4, start: 11 * 60, end: 13 * 60, room: null }],
+        meetings: [{ day: 4, start: 11 * 60, end: 13 * 60, room: null, dates: ["2026-09-24", "2026-10-01"] }],
       },
       {
         courseCode: "COMP4020",
         courseTitle: "Advanced Topics in Human-Centr_Agentic Coding Studio",
         activity: "TutA",
         group: "04",
-        meetings: [{ day: 3, start: 10 * 60 + 30, end: 12 * 60, room: "Rm 4.03_Marie Reay Bldg 155" }],
+        meetings: [
+          {
+            day: 3,
+            start: 10 * 60 + 30,
+            end: 12 * 60,
+            room: "Rm 4.03_Marie Reay Bldg 155",
+            dates: ["2026-09-23", "2026-09-30"],
+          },
+        ],
       },
     ]);
   });
@@ -101,11 +110,37 @@ describe("parseMyTimetable", () => {
     expect(classes.map((c) => `${c.activity} ${c.group}`)).toEqual(["LecA 01", "LecB 01"]);
   });
 
-  it("skips a session that happens once, rather than calling it weekly", () => {
-    const { classes, skipped } = parseMyTimetable(
+  it("keeps a session that happens once, with its one date", () => {
+    const { classes } = parseMyTimetable(
       myTimetable([
         ...weekly({ ...COURSE, activity: "LecA", group: "01", start: "0900", end: "1000" }, WEEKS.mon),
         { ...COURSE, activity: "AsmA", group: "01", date: "20260828", start: "0900", end: "1100" },
+      ]),
+    );
+    const assessment = classes.find((c) => c.activity === "AsmA");
+    expect(assessment?.meetings).toEqual([
+      { day: 5, start: 9 * 60, end: 11 * 60, room: null, dates: ["2026-08-28"] },
+    ]);
+  });
+
+  it("leaves out the weeks a class doesn't run, as the export does", () => {
+    // Mondays either side of Labour Day (5 Oct), which the export omits
+    const { classes } = parseMyTimetable(
+      myTimetable(
+        weekly({ ...COURSE, activity: "LecA", group: "01", start: "0900", end: "1000" }, [
+          "20260928",
+          "20261012",
+        ]),
+      ),
+    );
+    expect(classes[0].meetings[0].dates).toEqual(["2026-09-28", "2026-10-12"]);
+  });
+
+  it("skips weekend sessions, and counts them", () => {
+    const { classes, skipped } = parseMyTimetable(
+      myTimetable([
+        ...weekly({ ...COURSE, activity: "LecA", group: "01", start: "0900", end: "1000" }, WEEKS.mon),
+        { ...COURSE, activity: "WrkA", group: "01", date: "20260926", start: "1000", end: "1600" },
       ]),
     );
     expect(classes.map((c) => c.activity)).toEqual(["LecA"]);
