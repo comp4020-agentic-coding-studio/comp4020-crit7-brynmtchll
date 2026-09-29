@@ -57,18 +57,13 @@ export function placeOnGrid(slots: Slot[], people: number[]): Grid {
   return { from, to, days };
 }
 
-// Light fills that keep dark text readable; the person's name is always in
-// the block too, so colour is never the only thing telling people apart.
-export const COLOURS = [
-  { fill: "#d6e6ff", edge: "#2f6fd6" },
-  { fill: "#ffdcc7", edge: "#c8561b" },
-  { fill: "#d5f0d1", edge: "#2e8a3e" },
-  { fill: "#eadbff", edge: "#7a45c9" },
-  { fill: "#fff0b8", edge: "#a88400" },
-  { fill: "#ffd3de", edge: "#c43b63" },
-  { fill: "#cdf0ee", edge: "#1f8a85" },
-  { fill: "#e7e2d8", edge: "#7a6a4f" },
-];
+// Each person shown gets a colour by position (you first), defined as
+// .person-N in styles.css so light and dark themes each have their own.
+const PALETTE_SIZE = 8;
+
+export function personClass(index: number): string {
+  return `person-${index % PALETTE_SIZE}`;
+}
 
 export type SharedClass = {
   classId: number;

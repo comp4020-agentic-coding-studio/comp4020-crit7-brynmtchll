@@ -1,0 +1,23 @@
+---
+import Base from "../layouts/Base.astro";
+import { currentPerson } from "../lib/people";
+
+// Every wrong address lands here, inside the app, with a way back to
+// whatever the visitor was most likely after.
+const me = currentPerson(Astro.cookies);
+---
+
+<Base title="Page not found">
+  <h1>Page not found</h1>
+  <p>There's nothing at <code>{Astro.url.pathname}</code>. It may have been a mistyped or old link.</p>
+  <div class="actions">
+    {
+      me ? (
+        <a class="button primary" href="/overlay/">Go to your week</a>
+      ) : (
+        <a class="button primary" href="/">Make a timetable</a>
+      )
+    }
+    <a class="button" href="/readme/">About this app</a>
+  </div>
+</Base>

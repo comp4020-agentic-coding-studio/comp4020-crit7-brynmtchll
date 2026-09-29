@@ -1,13 +1,32 @@
 ---
 import "../styles.css";
+import { currentPerson } from "../lib/people";
 
 interface Props {
   title: string;
-  // the overlay's week grid wants the whole screen, not a reading column
-  wide?: boolean;
+  // the week grid and the home page want the screen; forms want a column
+  width?: "narrow" | "wide";
 }
 
-const { title, wide = false } = Astro.props;
+const { title, width = "narrow" } = Astro.props;
+
+// The nav is what you can do: signed in, that's your week, your friends and
+// your timetable; signed out, it's getting one.
+const me = currentPerson(Astro.cookies);
+const links = me
+  ? [
+      { href: "/overlay/", label: "Week" },
+      { href: "/friends/", label: "Friends" },
+      { href: "/me/", label: "My timetable" },
+      { href: "/readme/", label: "About" },
+    ]
+  : [
+      { href: "/", label: "Home" },
+      { href: "/link/", label: "Link a device" },
+      { href: "/readme/", label: "About" },
+    ];
+const path = Astro.url.pathname;
+const isCurrent = (href: string): boolean => (href === "/" ? path === "/" : path.startsWith(href));
 ---
 
 <!doctype html>
@@ -15,17 +34,75 @@ const { title, wide = false } = Astro.props;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>{title} · Timetable overlay</title>
   </head>
-  <body>
-    <nav aria-label="site">
-      <a href="/">Home</a>
-      <a href="/me/">My timetable</a>
-      <a href="/overlay/">Overlay</a>
-      <a href="/readme/">About</a>
-    </nav>
-    <main class:list={{ wide }}>
+  <body class={width}>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site">
+      <div class="site-inner">
+        <a class="brand" href={me ? "/overlay/" : "/"}>
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <rect width="32" height="32" rx="7" fill="#1f5fd6"></rect>
+            <rect x="6" y="7" width="8" height="10" rx="2" fill="#fff"></rect>
+            <rect x="18" y="7" width="8" height="6" rx="2" fill="#bcd3ff"></rect>
+            <rect x="18" y="15" width="8" height="10" rx="2" fill="#fff"></rect>
+            <rect x="6" y="19" width="8" height="6" rx="2" fill="#bcd3ff"></rect>
+          </svg>
+          <span>Timetable overlay</span>
+        </a>
+        <nav aria-label="site">
+          {
+            links.map((link) => (
+              <a href={link.href} aria-current={isCurrent(link.href) ? "page" : undefined}>
+                {link.label}
+              </a>
+            ))
+          }
+        </nav>
+      </div>
+    </header>
+    <main id="main" tabindex="-1">
       <slot />
     </main>
+    <p class="visually-hidden" aria-live="polite" id="announce"></p>
   </body>
 </html>
+
+<script>
+  // Copy and share buttons are enhancements: they're rendered hidden and
+  // only appear when the browser can actually do what they say. The page
+  // already shows the code or link as text, so nothing depends on them.
+  const announce = document.querySelector("#announce");
+
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-copy]")) {
+    if (!navigator.clipboard) continue;
+    button.hidden = false;
+    const label = button.textContent ?? "Copy";
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(button.dataset.copy ?? "");
+        button.textContent = "Copied";
+        if (announce) announce.textContent = "Copied to the clipboard.";
+        setTimeout(() => {
+          button.textContent = label;
+        }, 2000);
+      } catch {
+        // clipboard refused (no permission): the text is on the page anyway
+      }
+    });
+  }
+
+  for (const button of document.querySelectorAll<HTMLButtonElement>("[data-share]")) {
+    if (!navigator.share) continue;
+    button.hidden = false;
+    button.addEventListener("click", () => {
+      navigator
+        .share({ title: button.dataset.shareTitle, url: button.dataset.share })
+        .catch(() => {
+          // cancelled from the share sheet: nothing to do
+        });
+    });
+  }
+</script>

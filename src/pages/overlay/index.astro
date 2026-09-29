@@ -3,10 +3,10 @@ import Base from "../../layouts/Base.astro";
 import { ISO_DATE, addDays, canberraNow, formatDate, mondayOf } from "../../lib/dates";
 import { friendsOf } from "../../lib/friends";
 import {
-  COLOURS,
   FREE_WINDOW,
   freeTogether,
   inWeek,
+  personClass,
   placeOnGrid,
   sharedWith,
   statusAt,
@@ -25,7 +25,7 @@ const shown = params.has("filtered")
   : everyone;
 const shownIds = shown.map((p) => p.id);
 
-const colour = new Map(everyone.map((p, i) => [p.id, COLOURS[i % COLOURS.length]]));
+const colourOf = new Map(everyone.map((p, i) => [p.id, personClass(i)]));
 const nameOf = new Map(everyone.map((p) => [p.id, p.id === me?.id ? "You" : p.name]));
 
 // Which week the grid shows: ?week= snaps to its Monday. Otherwise it's
@@ -74,7 +74,7 @@ const list = (ids: number[]): string => {
 const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => grid.from + i * 60);
 ---
 
-<Base title="Overlay" wide>
+<Base title="Week" width="wide">
   <h1>Overlay</h1>
   {
     !me ? (
@@ -90,7 +90,7 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
           <fieldset>
             <legend>Show</legend>
             {everyone.map((p) => (
-              <label style={`--fill: ${colour.get(p.id)?.fill}; --edge: ${colour.get(p.id)?.edge}`}>
+              <label class={colourOf.get(p.id)}>
                 <input type="checkbox" name="show" value={p.id} checked={shownIds.includes(p.id)} />
                 {nameOf.get(p.id)}
                 {!hasTimetable.has(p.id) && <span class="muted"> (no timetable yet)</span>}
@@ -120,7 +120,7 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
                 const who = nameOf.get(p.id);
                 const verb = p.id === me.id ? "are" : "is";
                 return (
-                  <li style={`--edge: ${colour.get(p.id)?.edge}`}>
+                  <li class={colourOf.get(p.id)}>
                     <strong>{who}</strong>{" "}
                     {status.state === "in-class"
                       ? `${verb} in ${where(status.slot)} until ${clock(status.slot.end)}`
@@ -202,14 +202,12 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
                     );
                     return (
                       <li
-                        class:list={["block", { shared: sharedIds.has(b.classId) }]}
+                        class:list={["block", colourOf.get(b.personId), { shared: sharedIds.has(b.classId) }]}
                         style={[
                           `top: ${b.top}%`,
                           `height: ${b.height}%`,
                           `left: ${b.left}%`,
                           `width: ${b.width}%`,
-                          `--fill: ${colour.get(b.personId)?.fill}`,
-                          `--edge: ${colour.get(b.personId)?.edge}`,
                         ].join("; ")}
                       >
                         {/* the block is a button so the full details are one
@@ -230,7 +228,7 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
                           </span>
                           {sharedIds.has(b.classId) && <span class="visually-hidden">(shared)</span>}
                         </button>
-                        <div popover id={id} class="slot-details" style={`--edge: ${colour.get(b.personId)?.edge}`}>
+                        <div popover id={id} class:list={["slot-details", colourOf.get(b.personId)]}>
                           <p class="slot-who">{who}</p>
                           <p>
                             <strong>{b.courseCode}</strong> {b.courseTitle}

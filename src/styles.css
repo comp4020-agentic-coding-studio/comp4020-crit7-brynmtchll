@@ -1,95 +1,180 @@
-body {
-  margin: 0;
-  padding: 2rem;
-  font-family: system-ui, sans-serif;
-  line-height: 1.6;
-  color: #1a1a1a;
+/* =========================================================================
+   Tokens. Every colour the app uses is named here, once for light and once
+   for dark, so the two themes can't drift apart, and contrast is checked in
+   one place (the real-browser axe pass runs both schemes).
+   ========================================================================= */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-2: #eef0f3;
+  --text: #1b1f24;
+  --text-2: #3d434b;
+  --muted: #59606a;
+  --border: #d8dce2;
+  --border-strong: #b3bac4;
+
+  --accent: #1f5fd6;
+  --accent-strong: #174bb0;
+  --accent-soft: #e7eefc;
+  --on-accent: #ffffff;
+  --danger: #b42323;
+  --danger-soft: #fcebeb;
+  --on-danger: #ffffff;
+  --success: #1c7337;
+  --success-soft: #e6f4ea;
+  --warning: #7a5200;
+  --warning-soft: #fff3d6;
+
+  --grid-line: #e4e7eb;
+  --now: #d12b2b;
+  --free-a: rgb(46 138 62 / 0.2);
+  --free-b: rgb(46 138 62 / 0.07);
+
+  --shadow: 0 1px 2px rgb(16 24 40 / 0.05), 0 1px 3px rgb(16 24 40 / 0.08);
+  --shadow-lg: 0 12px 32px rgb(16 24 40 / 0.2);
+  --focus-ring: 0 0 0 3px rgb(31 95 214 / 0.4);
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --page: 44rem;
 }
 
-main {
-  max-width: 40rem;
-  margin: 0 auto;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1116;
+    --surface: #161a20;
+    --surface-2: #1f242c;
+    --text: #e7eaee;
+    --text-2: #c9ced6;
+    --muted: #a0a8b3;
+    --border: #2b323b;
+    --border-strong: #46505c;
+
+    --accent: #7eaaff;
+    --accent-strong: #a8c4ff;
+    --accent-soft: #1a2944;
+    --on-accent: #0a1730;
+    --danger: #ff8b8b;
+    --danger-soft: #3a1818;
+    --on-danger: #2a0707;
+    --success: #6fd08b;
+    --success-soft: #11291a;
+    --warning: #f0c060;
+    --warning-soft: #2e2410;
+
+    --grid-line: #262c34;
+    --now: #ff6b6b;
+    --free-a: rgb(111 208 139 / 0.11);
+    --free-b: rgb(111 208 139 / 0.03);
+
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+    --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.6);
+    --focus-ring: 0 0 0 3px rgb(126 170 255 / 0.5);
+  }
+}
+
+/* One colour per person on the overlay, in the order they're listed (you
+   first). Light fills keep dark text readable; dark fills keep light text
+   readable. The person's name is always shown too, so colour is never the
+   only thing telling people apart. */
+.person-0 { --fill: #dbe7ff; --edge: #2f6fd6; }
+.person-1 { --fill: #ffe0cc; --edge: #c8561b; }
+.person-2 { --fill: #d8f0d4; --edge: #2e8a3e; }
+.person-3 { --fill: #ebdeff; --edge: #7a45c9; }
+.person-4 { --fill: #fff0bd; --edge: #a88400; }
+.person-5 { --fill: #ffd8e2; --edge: #c43b63; }
+.person-6 { --fill: #cff0ee; --edge: #1f8a85; }
+.person-7 { --fill: #e9e4da; --edge: #7a6a4f; }
+
+@media (prefers-color-scheme: dark) {
+  .person-0 { --fill: #1b2d4d; --edge: #7eaaff; }
+  .person-1 { --fill: #3d2616; --edge: #f0a070; }
+  .person-2 { --fill: #173621; --edge: #6fd08b; }
+  .person-3 { --fill: #2e2146; --edge: #b999f5; }
+  .person-4 { --fill: #3a3113; --edge: #e0c25a; }
+  .person-5 { --fill: #40202b; --edge: #f08aa8; }
+  .person-6 { --fill: #123634; --edge: #5fd3cc; }
+  .person-7 { --fill: #2f2b24; --edge: #c9b999; }
+}
+
+/* =========================================================================
+   Base
+   ========================================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  /* anchors land below the sticky header, not under it */
+  scroll-padding-top: 5rem;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--bg);
+}
+
+body.wide {
+  --page: 72rem;
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.6rem, 1.25rem + 1.4vw, 2.1rem);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+h3 {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+}
+
+p {
+  margin: 0 0 0.75rem;
 }
 
 a {
-  color: #0b5fff;
+  color: var(--accent);
+  text-underline-offset: 0.15em;
 }
 
-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  margin-block: 1.5rem;
+a:hover {
+  color: var(--accent-strong);
 }
 
-input {
-  flex: 1;
-  min-width: 12rem;
-  padding: 0.4rem 0.6rem;
-  font: inherit;
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
-button {
-  padding: 0.4rem 1rem;
-  font: inherit;
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
 }
 
-#messages {
-  padding-inline-start: 1.2rem;
-}
-
-.share-code {
-  font-family: ui-monospace, monospace;
-  font-size: 1.25rem;
-  letter-spacing: 0.15em;
-}
-
-.friends {
-  list-style: none;
-  padding: 0;
-}
-
-.friends li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  padding-block: 0.25rem;
-  border-bottom: 1px solid #e5e5e5;
-}
-
-.friends form {
-  margin: 0;
-}
-
-form.stacked {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-textarea {
-  padding: 0.4rem 0.6rem;
-  font: 0.85rem ui-monospace, monospace;
-}
-
-.classes {
-  list-style: none;
-  padding: 0;
-}
-
-.classes .when {
-  display: inline-block;
-  min-width: 8.5rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.classes .room {
-  color: #555;
-}
-
-main.wide {
-  max-width: 72rem;
+img {
+  max-width: 100%;
+  height: auto;
 }
 
 .visually-hidden {
@@ -102,37 +187,837 @@ main.wide {
 }
 
 .muted {
-  color: #555;
+  color: var(--muted);
 }
 
-/* --- overlay: who's shown -------------------------------------------------- */
+.fine {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* =========================================================================
+   Layout: skip link, header, main
+   ========================================================================= */
+
+.skip {
+  position: absolute;
+  top: -4rem;
+  left: 0.75rem;
+  z-index: 100;
+  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.skip:focus {
+  top: 0.75rem;
+}
+
+.site {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  view-transition-name: site-header;
+}
+
+.site-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 0.6rem 1.25rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.brand:hover {
+  color: var(--text);
+}
+
+.brand svg {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.site nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.site nav a {
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  color: var(--text-2);
+  font-weight: 550;
+  text-decoration: none;
+}
+
+.site nav a:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.site nav a[aria-current="page"] {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+main {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 1.75rem 1.25rem 4rem;
+}
+
+main:focus {
+  outline: none;
+}
+
+/* =========================================================================
+   Components
+   ========================================================================= */
+
+/* --- cards: one per task on a page ------------------------------------- */
+
+.card {
+  margin-block: 1rem;
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.card > :last-child {
+  margin-bottom: 0;
+}
+
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.card-head h2 {
+  margin: 0;
+}
+
+.card.start {
+  border: 2px solid var(--accent);
+}
+
+.card.danger-zone {
+  margin-top: 2.5rem;
+  border-color: var(--danger);
+  box-shadow: none;
+}
+
+.columns {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  margin-block: 1rem;
+}
+
+.columns > .card {
+  margin-block: 0;
+}
+
+/* --- buttons: one primary per task, the rest secondary ------------------ */
+
+button,
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 550;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button:hover,
+.button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+button:focus-visible,
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.primary,
+.primary:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.primary:hover {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+}
+
+.danger-button,
+.danger-button:hover {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--on-danger);
+}
+
+.quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent);
+}
+
+.quiet:hover {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.small {
+  min-height: 2rem;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+/* --- forms ------------------------------------------------------------- */
+
+form {
+  margin: 0;
+}
+
+label {
+  font-weight: 550;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 1rem;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+input:not([type]),
+input[type="text"],
+input[type="url"],
+input[type="file"],
+textarea {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+input[type="file"] {
+  padding: 0.35rem;
+}
+
+input[type="file"]::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+textarea {
+  font: 0.85rem/1.4 var(--mono);
+}
+
+input[type="checkbox"] {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* an input and its button on one line, wrapping on a phone */
+.inline-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.inline-field > input {
+  flex: 1 1 12rem;
+  width: auto;
+}
+
+.confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+/* --- notices: what just happened, in the place it happened -------------- */
+
+.notice {
+  margin-block: 0 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--accent);
+  border-left-width: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+}
+
+.notice.success {
+  border-color: var(--success);
+  background: var(--success-soft);
+}
+
+.notice.error {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.notice.warning {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.notice > :last-child {
+  margin-bottom: 0;
+}
+
+.notice .actions {
+  margin-top: 0.5rem;
+}
+
+/* --- rows: people and classes as lists ---------------------------------- */
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rows > li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.rows > li:first-child {
+  border-top: 0;
+}
+
+.rows .grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.avatar {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 2px solid var(--edge);
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.empty {
+  padding: 1rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  text-align: center;
+}
+
+.empty > :last-child {
+  margin-bottom: 0;
+}
+
+/* --- codes, links and QR codes ----------------------------------------- */
+
+.code {
+  font: 650 1.7rem/1.2 var(--mono);
+  letter-spacing: 0.18em;
+}
+
+.copy-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.copy-field > input {
+  flex: 1 1 14rem;
+  width: auto;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+}
+
+.qr {
+  display: inline-block;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  /* QR codes scan best dark-on-light, so this stays white in dark mode */
+  background: #fff;
+  line-height: 0;
+}
+
+.qr svg {
+  width: 11rem;
+  height: 11rem;
+}
+
+.share-grid {
+  display: grid;
+  gap: 1rem 1.5rem;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+}
+
+@media (max-width: 34rem) {
+  .share-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+details > summary {
+  color: var(--accent);
+  font-weight: 550;
+  cursor: pointer;
+}
+
+details[open] > summary {
+  margin-bottom: 0.75rem;
+}
+
+/* --- pills and status chips -------------------------------------------- */
+
+.pill {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.8rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+
+.status {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 0.78rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.status.in-class {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.status.free {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+/* --- getting started ---------------------------------------------------- */
+
+.checklist {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.check {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  margin-top: 0.05rem;
+  border: 2px solid var(--border-strong);
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.checklist li.done .check {
+  border-color: var(--success);
+  background: var(--success);
+  color: var(--surface);
+}
+
+.checklist li.done .step {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.progress {
+  height: 0.4rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--success);
+}
+
+/* =========================================================================
+   Home
+   ========================================================================= */
+
+.hero {
+  padding-block: 1rem 0.5rem;
+}
+
+.lead {
+  max-width: 38rem;
+  color: var(--text-2);
+  font-size: 1.15rem;
+}
+
+.steps {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+  margin: 1rem 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+
+.steps li {
+  position: relative;
+  padding: 1rem 1rem 1rem 3.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  counter-increment: step;
+}
+
+.steps li::before {
+  content: counter(step);
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+figure {
+  margin: 1.5rem 0 0;
+}
+
+figure img {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+figcaption {
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.prose img {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* =========================================================================
+   My timetable: classes by day
+   ========================================================================= */
+
+.days {
+  display: grid;
+  gap: 0.25rem 1rem;
+  grid-template-columns: 3rem 1fr;
+  margin: 0;
+}
+
+.days dt {
+  padding-top: 0.55rem;
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.days dd {
+  margin: 0;
+}
+
+.days .rows > li {
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.75rem;
+}
+
+.when {
+  flex: none;
+  min-width: 7.2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.room {
+  color: var(--muted);
+}
+
+/* =========================================================================
+   The week
+   ========================================================================= */
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.page-head h1 {
+  margin: 0;
+}
+
+.segmented {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.segmented a {
+  padding: 0.45rem 0.85rem;
+  border-left: 1px solid var(--border);
+  color: var(--text-2);
+  font-weight: 550;
+  text-decoration: none;
+}
+
+.segmented a:first-child {
+  border-left: 0;
+}
+
+.segmented a:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+/* --- who's shown: filter chips ----------------------------------------- */
+
+.people {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
 
 .people fieldset {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.5rem;
-  border: 0;
-  padding: 0;
   margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .people legend {
   float: left;
-  margin-right: 0.5rem;
-  font-weight: 600;
+  margin-right: 0.25rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 650;
 }
 
-.people label {
+.chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.15rem 0.6rem;
-  border: 2px solid var(--edge);
+  gap: 0.45rem;
+  padding: 0.3rem 0.8rem 0.3rem 0.5rem;
+  border: 1.5px solid var(--border-strong);
   border-radius: 999px;
-  background: var(--fill);
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 550;
+  cursor: pointer;
+  user-select: none;
 }
 
-/* --- overlay: the week grid ------------------------------------------------ */
+/* the checkbox does the work, invisibly: the chip is how it looks */
+.chip input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.chip .dot {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid var(--edge);
+  border-radius: 50%;
+}
+
+.chip:has(input:checked) {
+  border-color: var(--edge);
+  background: var(--fill);
+  color: var(--text);
+}
+
+.chip:has(input:checked) .dot {
+  background: var(--edge);
+}
+
+.chip:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  list-style: none;
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 1.4rem;
+  height: 0.9rem;
+  border-radius: 3px;
+}
+
+.swatch.shared {
+  background: var(--surface-2);
+  outline: 2px dashed var(--border-strong);
+  outline-offset: -2px;
+}
+
+.swatch.free {
+  border: 1px solid var(--grid-line);
+  background: repeating-linear-gradient(135deg, var(--free-a) 0 4px, var(--free-b) 4px 8px);
+}
+
+.swatch.now-mark {
+  height: 2px;
+  border-radius: 0;
+  background: var(--now);
+}
+
+/* --- right now ---------------------------------------------------------- */
+
+.now-list > li {
+  align-items: flex-start;
+}
+
+.now-list .detail {
+  display: block;
+  color: var(--text-2);
+}
+
+/* --- the grid ------------------------------------------------------------ */
+
+.week-card {
+  padding: 1rem 1rem 0.5rem;
+}
 
 .week-scroll {
   /* the grid scrolls sideways on a phone; the page never does */
@@ -144,14 +1029,15 @@ main.wide {
   display: grid;
   grid-template-columns: 3.2rem repeat(5, minmax(7rem, 1fr));
   min-width: 40rem;
+  padding-bottom: 0.75rem; /* room for the last hour label */
 }
 
 .hours {
   position: relative;
-  margin-top: 2.2rem; /* line up with the day bodies, under their headings */
   height: calc(var(--hours) * var(--hour));
+  margin-top: 2.2rem; /* line up with the day bodies, under their headings */
+  color: var(--muted);
   font-size: 0.75rem;
-  color: #555;
 }
 
 .hours span {
@@ -160,76 +1046,37 @@ main.wide {
 }
 
 .day h3 {
-  margin: 0;
   height: 2.2rem;
+  margin: 0;
+  font-size: 0.95rem;
   line-height: 2.2rem;
   text-align: center;
-  font-size: 1rem;
+}
+
+.day h3 .date {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.day.today h3 {
+  color: var(--accent);
 }
 
 .day-body {
   position: relative;
   height: calc(var(--hours) * var(--hour));
-  border-left: 1px solid #ddd;
+  border-left: 1px solid var(--grid-line);
   background: repeating-linear-gradient(
     to bottom,
-    #e8e8e8 0,
-    #e8e8e8 1px,
+    var(--grid-line) 0,
+    var(--grid-line) 1px,
     transparent 1px,
     transparent var(--hour)
   );
 }
 
-.block {
-  position: absolute;
-  box-sizing: border-box;
-  overflow: hidden;
-  padding: 0.15rem 0.25rem;
-  border-left: 3px solid var(--edge);
-  border-radius: 3px;
-  background: var(--fill);
-  font-size: 0.72rem;
-  line-height: 1.25;
-  box-shadow: inset 0 0 0 1px #fff;
-}
-
-.block strong,
-.block .kind,
-.block .who {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.block .who {
-  color: #333;
-}
-
-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.people input[type="checkbox"] {
-  flex: none;
-  min-width: 0;
-  margin: 0;
-}
-
-.week {
-  padding-bottom: 0.75rem; /* room for the last hour label */
-}
-
-/* a class you share: the dashed ring shows up in every lane that holds it */
-.block.shared {
-  outline: 2px dashed var(--edge);
-  outline-offset: -2px;
-}
-
-.shared-list {
-  padding-inline-start: 1.2rem;
+.day.today .day-body {
+  background-color: color-mix(in srgb, var(--accent-soft) 45%, transparent);
 }
 
 .blocks {
@@ -243,144 +1090,86 @@ nav {
 /* free together: a band across every lane, behind the classes */
 .free {
   position: absolute;
-  left: 0;
   right: 0;
-  background: repeating-linear-gradient(
-    135deg,
-    rgb(46 138 62 / 0.16) 0 6px,
-    rgb(46 138 62 / 0.08) 6px 12px
-  );
-}
-
-.free-list {
-  padding-inline-start: 1.2rem;
-}
-
-.small {
-  font-size: 0.85rem;
-}
-
-.now-list {
-  list-style: none;
-  padding: 0;
-}
-
-.now-list li {
-  padding-left: 0.6rem;
-  border-left: 4px solid var(--edge);
-  margin-block: 0.3rem;
+  left: 0;
+  background: repeating-linear-gradient(135deg, var(--free-a) 0 6px, var(--free-b) 6px 12px);
 }
 
 /* the time now, across today's column, above the classes */
 .now {
   position: absolute;
-  left: -4px;
   right: 0;
+  left: -4px;
   z-index: 2;
-  border-top: 2px solid #d12b2b;
+  border-top: 2px solid var(--now);
 }
 
 .now::before {
   content: "";
   position: absolute;
-  left: 0;
   top: -5px;
+  left: 0;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #d12b2b;
+  background: var(--now);
 }
-
-.week-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem 1.5rem;
-}
-
-.week-nav {
-  display: flex;
-  gap: 1rem;
-}
-
-.day h3 .date {
-  font-weight: 400;
-  color: #555;
-}
-
-.link-code {
-  padding: 0.5rem 1rem;
-  border: 2px dashed #2f6fd6;
-  border-radius: 6px;
-  overflow-wrap: anywhere;
-}
-
-.device-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.device-actions form {
-  margin: 0;
-}
-
-.invite {
-  padding: 0.25rem 1rem;
-  border: 2px solid #2e8a3e;
-  border-radius: 6px;
-  background: #eef8ec;
-}
-
-.danger {
-  margin-top: 3rem;
-  padding: 0.25rem 1rem 1rem;
-  border: 1px solid #c43b3b;
-  border-radius: 6px;
-}
-
-.danger button {
-  color: #fff;
-  background: #b42323;
-  border: 1px solid #8c1a1a;
-  border-radius: 3px;
-}
-
-label.confirm {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-label.confirm input {
-  flex: none;
-  min-width: 0;
-}
-
-/* --- overlay: blocks as buttons, details in a popover ------------------- */
 
 .block {
-  container-type: inline-size;
+  position: absolute;
+  overflow: hidden;
   padding: 0;
+  border-left: 3px solid var(--edge);
+  border-radius: 4px;
+  background: var(--fill);
+  box-shadow: inset 0 0 0 1px var(--surface);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  container-type: inline-size;
+}
+
+/* a class you share: the dashed ring shows up in every lane that holds it */
+.block.shared {
+  outline: 2px dashed var(--edge);
+  outline-offset: -2px;
 }
 
 .block-button {
   display: block;
   width: 100%;
   height: 100%;
+  min-height: 0;
   padding: 0.15rem 0.25rem;
   border: 0;
+  border-radius: 0;
   background: none;
+  color: var(--text);
   font: inherit;
   text-align: left;
-  color: inherit;
-  cursor: pointer;
+}
+
+.block-button:hover {
+  background: color-mix(in srgb, var(--edge) 12%, transparent);
+  color: var(--text);
 }
 
 .block-button:focus-visible {
-  outline: 3px solid #1a1a1a;
+  outline: 3px solid var(--text);
   outline-offset: -3px;
+  box-shadow: none;
+}
+
+.block strong,
+.block .kind,
+.block .who {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.block .who {
+  color: var(--text-2);
 }
 
 .who-short {
@@ -412,11 +1201,13 @@ label.confirm input {
 
 .slot-details {
   max-width: min(22rem, calc(100vw - 2rem));
-  padding: 0.75rem 1rem;
-  border: 1px solid #ccc;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
   border-top: 5px solid var(--edge);
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--text);
   font-size: 0.95rem;
   line-height: 1.4;
 }
@@ -426,41 +1217,115 @@ label.confirm input {
 }
 
 .slot-details .slot-who {
-  font-weight: 600;
+  font-weight: 650;
 }
 
 .slot-details::backdrop {
-  background: rgb(0 0 0 / 0.15);
+  background: rgb(0 0 0 / 0.2);
 }
 
-/* --- phones: one day per screen, swiped, with the hours pinned ------------ */
+/* where anchor positioning exists, the details open beside their block
+   instead of in the middle of the screen */
+@media (min-width: 40rem) {
+  @supports (position-area: bottom) {
+    .slot-details {
+      inset: auto;
+      margin: 0.35rem 0;
+      position-area: bottom span-right;
+      position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+    }
+
+    .slot-details::backdrop {
+      background: transparent;
+    }
+  }
+}
+
+.free-list,
+.shared-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.free-list li,
+.shared-list li {
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.free-list li:first-child,
+.shared-list li:first-child {
+  border-top: 0;
+}
+
+.free-list .day-name {
+  display: inline-block;
+  min-width: 2.6rem;
+}
+
+.time {
+  display: inline-block;
+  margin: 0.1rem 0.15rem 0.1rem 0;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* =========================================================================
+   Phones
+   ========================================================================= */
 
 .day-tabs {
   display: none;
 }
 
 @media (max-width: 40rem) {
+  html {
+    scroll-padding-top: 1rem;
+  }
+
+  .site {
+    position: static;
+  }
+
+  .site-inner {
+    padding: 0.6rem 1rem;
+  }
+
+  main {
+    padding: 1.25rem 1rem 3rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .week-card {
+    padding: 0.75rem 0.5rem 0.25rem;
+  }
+
   .day-tabs {
     display: flex;
     justify-content: space-between;
-    margin-block: 0.75rem 0.25rem;
+    margin-block: 0 0.5rem;
   }
 
   .day-tabs a {
-    padding: 0.3rem 0.6rem;
+    padding: 0.3rem 0.65rem;
     border-radius: 999px;
+    color: var(--text-2);
+    font-weight: 550;
     text-decoration: none;
   }
 
   .day-tabs a[aria-current] {
-    /* the link blue is 4.05:1 on this fill; darker text clears 4.5 */
-    color: #0b3b99;
-    background: #d6e6ff;
-    font-weight: 600;
-  }
-
-  body {
-    padding: 1rem;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
   }
 
   .week-scroll {
@@ -482,42 +1347,22 @@ label.confirm input {
     position: sticky;
     left: 0;
     z-index: 3;
-    background: #fff;
+    background: var(--surface);
   }
 }
 
-#import.start {
-  padding: 0.25rem 1rem 1rem;
-  border: 2px solid #2f6fd6;
-  border-radius: 6px;
-  background: #f3f7ff;
+/* =========================================================================
+   Moving between pages
+   ========================================================================= */
+
+/* Page loads cross-fade instead of flashing, which matters most on the week
+   (every toggle and week change is a page load); the header holds still. */
+@view-transition {
+  navigation: auto;
 }
 
-.how {
-  padding-inline-start: 1.4rem;
-}
-
-.how li {
-  margin-block: 0.4rem;
-}
-
-figure {
-  margin: 1.5rem 0 0;
-}
-
-figure img {
-  width: 100%;
-  height: auto;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-}
-
-figcaption {
-  font-size: 0.85rem;
-  color: #555;
-}
-
-main img {
-  max-width: 100%;
-  height: auto;
+@media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
 }
