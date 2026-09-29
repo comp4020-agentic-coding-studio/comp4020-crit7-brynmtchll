@@ -38,3 +38,9 @@ button {
 #messages {
   padding-inline-start: 1.2rem;
 }
+
+.share-code {
+  font-family: ui-monospace, monospace;
+  font-size: 1.25rem;
+  letter-spacing: 0.15em;
+}

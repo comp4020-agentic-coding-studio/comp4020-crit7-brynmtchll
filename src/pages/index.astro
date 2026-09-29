@@ -1,5 +1,8 @@
 ---
 import Base from "../layouts/Base.astro";
+import { currentPerson } from "../lib/people";
+
+const me = currentPerson(Astro.cookies);
 ---
 
 <Base title="Home">
@@ -8,4 +11,18 @@ import Base from "../layouts/Base.astro";
     See your ANU timetable alongside your friends': who shares your tutes, when
     you're all free, and who's in class right now.
   </p>
+  {
+    me ? (
+      <p>
+        Welcome back, {me.name}. Go to <a href="/me/">your timetable</a> or the{" "}
+        <a href="/overlay/">overlay</a>.
+      </p>
+    ) : (
+      <form method="post" action="/api/people">
+        <label for="name">Your name, as friends know you</label>
+        <input id="name" name="name" required maxlength="40" autocomplete="nickname" />
+        <button>Make my timetable</button>
+      </form>
+    )
+  }
 </Base>

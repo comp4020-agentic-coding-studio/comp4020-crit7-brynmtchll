@@ -1,0 +1,26 @@
+---
+import Base from "../../layouts/Base.astro";
+import { currentPerson } from "../../lib/people";
+
+const me = currentPerson(Astro.cookies);
+---
+
+<Base title="My timetable">
+  <h1>My timetable</h1>
+  {
+    me ? (
+      <section aria-labelledby="share-heading">
+        <h2 id="share-heading">Your share code</h2>
+        <p>
+          Give this to friends so they can overlay your timetable:{" "}
+          <strong class="share-code">{me.shareCode}</strong>
+        </p>
+      </section>
+    ) : (
+      <p>
+        You don't have a timetable on this device yet. <a href="/">Make one</a>
+        — it takes a name.
+      </p>
+    )
+  }
+</Base>
