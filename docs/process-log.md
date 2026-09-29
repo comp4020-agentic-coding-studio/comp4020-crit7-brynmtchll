@@ -271,3 +271,44 @@ Deployed after reviewing `0005`'s intended `DROP TABLE`s; all probes pass.
 Writing the new harness rule ("never let one person's import write rows
 another person's view reads") exposed that `courses.title` still breaks it.
 
+## 18. Titles, contrast
+
+- `courses.title` was first-import-wins, breaking the rule the harness had
+  just gained. Titles moved onto `picks` from each person's own export.
+  drizzle-kit's SQL was valid but would have blanked every title, so `0006`
+  got a hand-written `UPDATE`, tested from the `0005` state. [`024c4b8`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/024c4b8)
+- Ran the full axe rule set by hand in real Chrome (jsdom has contrast off)
+  over every page at 1280px and 390px. One failure: today's phone day tab at
+  4.05:1. Fixed. Not added to `pnpm check`, since it needs Chrome.
+  [`1185f0e`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/1185f0e)
+
+## 19. Pause, then the journey through the real UI
+
+> pause for now
+
+> continue
+
+Before the pause, a two-person journey in a real browser (sign-up, upload,
+share link, add by typed code, link a phone, popover on a phone, delete)
+failed at the phone claiming its device link. After resuming, it turned out
+to be the script: `tap` doesn't wait for the form's navigation, so the URL
+check ran early and the next `goto` aborted the claim before its cookie
+landed. With the navigation awaited, all 14 steps pass. The app was fine.
+The lesson went into `CLAUDE.md`.
+
+Pushed and deployed `024c4b8`/`1185f0e`. Confirmed live by matching the
+stylesheet hash to the local build, since the deploy output was ambiguous.
+
+## 20. First-time visitors, and an image that wouldn't load
+
+The home page now explains the app with a screenshot, made from made-up
+people so nobody's enrolment ends up in a public repo. `/me/` leads with the
+import until there are classes. [`1fb0f33`](https://github.com/comp4020-agentic-coding-studio/comp4020-crit7-brynmtchll/commit/1fb0f33)
+
+The README image first rendered through Astro's runtime optimiser, which
+needs sharp: 200 under the test server, 500 on a scratch server from the
+same build. It's a raw `<img>` now, guarded by `spec/images.test.ts`. My
+first check that the new test could fail was itself vacuous: `git stash`
+restored a README with no image. Redone by breaking a copy. Also went into
+`CLAUDE.md`.
+
