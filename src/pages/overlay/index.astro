@@ -61,7 +61,7 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
       </p>
     ) : (
       <>
-        <form method="get" class="people" id="people">
+        <form method="get" class="people" id="people" data-watch={everyone.map((p) => p.id).join(" ")}>
           <input type="hidden" name="filtered" value="1" />
           <fieldset>
             <legend>Show</legend>
@@ -225,4 +225,25 @@ const hours = Array.from({ length: (grid.to - grid.from) / 60 + 1 }, (_, i) => g
   // button does the same.
   const form = document.querySelector<HTMLFormElement>("#people");
   form?.addEventListener("change", () => form.requestSubmit());
+
+  // Live: when anyone on this overlay re-imports, the stream says who, and
+  // the page reloads to pick up their new timetable from the server. It also
+  // reloads every few minutes so "Right now" doesn't go stale on a screen
+  // left open.
+  const watched = new Set((form?.dataset.watch ?? "").split(" ").filter(Boolean).map(Number));
+  let pending: ReturnType<typeof setTimeout> | undefined;
+  const reloadSoon = () => {
+    clearTimeout(pending);
+    pending = setTimeout(() => location.reload(), 300);
+  };
+  if (watched.size > 0) {
+    const source = new EventSource("/api/events");
+    source.addEventListener("message", (event) => {
+      const { personId } = JSON.parse(event.data) as { personId: number };
+      if (watched.has(personId)) reloadSoon();
+    });
+    setInterval(() => {
+      if (document.visibilityState === "visible") location.reload();
+    }, 5 * 60_000);
+  }
 </script>
